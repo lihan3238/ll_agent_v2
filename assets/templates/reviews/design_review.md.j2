@@ -1,0 +1,72 @@
+# 🏗️ 深度架构蓝图: {{ phase_name }}
+
+## 1. 项目概览
+- **Project Name**: `{{ design.project_name }}`
+- **Style**: {{ design.architecture_style }}
+
+### 📦 Dependencies (requirements.txt)
+```text
+{% for req in design.requirements -%}
+{{ req }}
+{% endfor %}
+```
+
+### ⚙️ Configuration
+| Hyperparameter | Default Value |
+| :--- | :--- |
+{% for k, v in design.hyperparameters.items() -%}
+| `{{ k }}` | `{{ v }}` |
+{% endfor %}
+
+---
+
+## 2. 核心文件结构 (Detailed Specs)
+
+{% for file in design.file_structure %}
+### 📄 `{{ file.filename }}`
+> *{{ file.description }}*
+
+**Imports**: 
+`{{ file.imports | join(', ') }}`
+
+{% if file.classes %}
+#### Classes
+{% for cls in file.classes %}
+**`class {{ cls.name }}({{ cls.inherits_from }})`**
+- *Attributes*: `{{ cls.attributes | join(', ') }}`
+
+| Method | Signature | Logic (Pseudo-code) |
+| :--- | :--- | :--- |
+{% for method in cls.methods -%}
+| **{{ method.name }}** | `{{ method.args | join(', ') }} -> {{ method.return_type }}` | <ul>{% for step in method.core_logic_steps %}<li>`{{ step }}`</li>{% endfor %}</ul> |
+{% endfor %}
+
+{% endfor %}
+{% endif %}
+
+{% if file.functions %}
+#### Functions
+{% for func in file.functions %}
+- 🔹 **`{{ func.name }}`**
+  - Logic:
+  {% for step in func.core_logic_steps -%}
+    1. `{{ step }}`
+  {% endfor %}
+{% endfor %}
+{% endif %}
+
+---
+{% endfor %}
+
+## 3. 主流程 (Execution Flow)
+{{ design.main_execution_flow }}
+
+---
+<!-- SYSTEM SEPARATOR -->
+
+# 🟢 用户决策区
+
+**决策 (Action)**: [ APPROVE ] 
+
+**反馈意见 (Feedback)**:
+<!-- 比如：forward 函数里的 shape 好像不对，应该是 [B, D, L] -->

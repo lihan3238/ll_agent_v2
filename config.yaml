@@ -1,0 +1,50 @@
+llm:
+  default_base_url: null # 让代码自动去读 DEEPSEEK_BASE_URL
+  default_model: "DeepSeek-V3.2-Exp"
+
+agents:
+  researcher:
+    model: "DeepSeek-V3.2-Exp" # 比如用 deepseek 读论文便宜
+    temperature: 0.7
+    
+    # [新增] 自定义流程参数
+    query_count: 3                # 生成多少个搜索关键词
+    search_limit_per_query: 3     # 每个关键词搜几篇
+    max_context_papers: 5         # 最终给 LLM 看几篇最相关的 (防止上下文溢出)
+    timeout: 15                   # API 超时时间
+
+  translator:
+    model: "DeepSeek-V3.2-Exp" # 翻译需要稍微好一点的模型理解语意，DeepSeek 也可以
+    temperature: 0.1
+
+  theorist:
+    model: "DeepSeek-V3.2-Exp" # 聪明，负责逻辑推理
+    temperature: 0.7
+
+  # [新增] 评审专家
+  reviewer:
+    model: "DeepSeek-V3.2-Exp" # 必须聪明且严谨
+    temperature: 0.2 # 低温，减少幻觉，保持严厉
+    max_retries: 3
+
+  architect:
+    model: "DeepSeek-V3.2-Exp"
+    temperature: 0.5
+
+project:
+  # [决定权在你]: 这里填什么，就会生成 workspace/mamba_weather_v3/ 文件夹
+  name: "mamba_weather_v2" 
+  # 模式: interactive (有人值守) / autonomous (无人挂机)
+  # mode: "interactive"
+  mode: "autonomous"
+  # [新增] 用户偏好语言 (用于生成 Markdown 里的提示语，但不影响内核)
+  user_language: "zh"
+
+workflow:
+  # 每个阶段的 Review 轮次 (大循环)
+  research_rounds: 3
+  theory_rounds: 3
+  architect_rounds: 2
+  
+  # 每次 Review 前 Agent 自己闷头跑几轮 (小循环)
+  internal_loops: 2

@@ -1,0 +1,41 @@
+# 📝 阶段审查: {{ phase_name }}
+
+## 1. 核心思路 (Refined Idea)
+> **{{ report.refined_idea }}**
+
+## 2. 搜索关键词 (Keywords)
+{% for kw in report.keywords -%}
+- `{{ kw }}`
+{% endfor %}
+
+## 3. 相关工作综述 (Related Work)
+{{ report.related_work_summary }}
+
+## 4. 重点论文 (Top Papers)
+| Year | Citations | Title |
+| :---: | :---: | --- |
+{% for p in report.top_papers -%}
+| {{ p.year }} | {{ p.citations }} | [{{ p.title }}]({{ p.url }}) |
+{% endfor %}
+
+### 论文摘要详情:
+{% for p in report.top_papers -%}
+- **{{ p.title }}**
+  - *Summary*: {{ p.summary }}
+{% endfor %}
+
+## 5. 实施建议 (Implementation Suggestions)
+{{ report.implementation_suggestions }}
+
+---
+<!-- ⚠️ 系统分割线 (SYSTEM SEPARATOR) - 请勿删除或修改此行以上内容 -->
+
+# 🟢 用户决策区 (User Decision)
+
+请在下方填写您的决定。**支持中文**，系统会自动翻译。
+
+**决策 (Action)**: [ APPROVE ] 
+<!-- 选项: APPROVE (通过), REVISE (修改) -->
+
+**反馈意见 (Feedback)**:
+<!-- 如果选择 REVISE，请填写具体修改意见。例如："请增加对比实验..." -->

@@ -1,0 +1,3391 @@
+2025-12-06 00:22:37 | INFO     | LLM_TRACE | ======== [REQUEST] Model: gpt-4o-mini ========
+2025-12-06 00:22:37 | INFO     | LLM_TRACE | URL: https://api.moleapi.com/v1
+2025-12-06 00:22:37 | INFO     | LLM_TRACE | PROMPT:
+You are a Principal Software Architect. 
+Your goal is to produce a **Low-Level Engineering Specification** based on a theoretical framework.
+
+**THE GOLDEN RULE**: The Coder should NOT have to guess algorithms. 
+- If the Theory says "Equation 3: h_t = A h_{t-1} + B x_t", you MUST describe this exact logic in the `core_logic_steps` of the corresponding method.
+- Define exact Tensor shapes (e.g., `[Batch, Time, Channels]`) in arguments and docstrings.
+- **Separation of Concerns**: Separate `Data Preprocessing`, `Model Definition`, and `Training Loop` into distinct files.
+
+**JSON FORMATTING**:
+- Escape all backslashes (e.g., `src\\models`).
+
+Output strictly a JSON object matching the schema.
+Target Schema:
+{
+  "$defs": {
+    "ClassSpec": {
+      "properties": {
+        "name": {
+          "description": "Class name, e.g., 'MambaBlock'",
+          "title": "Name",
+          "type": "string"
+        },
+        "inherits_from": {
+          "default": "nn.Module",
+          "description": "Parent class.",
+          "title": "Inherits From",
+          "type": "string"
+        },
+        "description": {
+          "description": "High-level purpose.",
+          "title": "Description",
+          "type": "string"
+        },
+        "attributes": {
+          "description": "Class attributes/fields to initialize in __init__.",
+          "items": {
+            "type": "string"
+          },
+          "title": "Attributes",
+          "type": "array"
+        },
+        "methods": {
+          "description": "List of methods.",
+          "items": {
+            "$ref": "#/$defs/MethodSpec"
+          },
+          "title": "Methods",
+          "type": "array"
+        }
+      },
+      "required": [
+        "name",
+        "description",
+        "attributes",
+        "methods"
+      ],
+      "title": "ClassSpec",
+      "type": "object"
+    },
+    "FileSpec": {
+      "properties": {
+        "filename": {
+          "description": "Path/Name, e.g., 'src/models/mamba.py'",
+          "title": "Filename",
+          "type": "string"
+        },
+        "description": {
+          "description": "Purpose of this file.",
+          "title": "Description",
+          "type": "string"
+        },
+        "imports": {
+          "description": "Key libraries to import.",
+          "items": {
+            "type": "string"
+          },
+          "title": "Imports",
+          "type": "array"
+        },
+        "classes": {
+          "default": [],
+          "description": "Classes to define.",
+          "items": {
+            "$ref": "#/$defs/ClassSpec"
+          },
+          "title": "Classes",
+          "type": "array"
+        },
+        "functions": {
+          "default": [],
+          "description": "Global functions.",
+          "items": {
+            "$ref": "#/$defs/MethodSpec"
+          },
+          "title": "Functions",
+          "type": "array"
+        }
+      },
+      "required": [
+        "filename",
+        "description",
+        "imports"
+      ],
+      "title": "FileSpec",
+      "type": "object"
+    },
+    "MethodSpec": {
+      "properties": {
+        "name": {
+          "description": "Method name, e.g., 'forward'",
+          "title": "Name",
+          "type": "string"
+        },
+        "args": {
+          "description": "Arguments with type hints, e.g., ['x: torch.Tensor', 'state: Optional[Tensor] = None']",
+          "items": {
+            "type": "string"
+          },
+          "title": "Args",
+          "type": "array"
+        },
+        "return_type": {
+          "description": "Return type, e.g., 'torch.Tensor'",
+          "title": "Return Type",
+          "type": "string"
+        },
+        "docstring": {
+          "description": "Brief explanation of what this method does.",
+          "title": "Docstring",
+          "type": "string"
+        },
+        "core_logic_steps": {
+          "description": "Step-by-step logic or pseudo-code. CRITICAL for complex math.",
+          "items": {
+            "type": "string"
+          },
+          "title": "Core Logic Steps",
+          "type": "array"
+        }
+      },
+      "required": [
+        "name",
+        "args",
+        "return_type",
+        "docstring",
+        "core_logic_steps"
+      ],
+      "title": "MethodSpec",
+      "type": "object"
+    }
+  },
+  "properties": {
+    "project_name": {
+      "title": "Project Name",
+      "type": "string"
+    },
+    "architecture_style": {
+      "title": "Architecture Style",
+      "type": "string"
+    },
+    "requirements": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Requirements",
+      "type": "array"
+    },
+    "file_structure": {
+      "items": {
+        "$ref": "#/$defs/FileSpec"
+      },
+      "title": "File Structure",
+      "type": "array"
+    },
+    "data_flow_diagram": {
+      "description": "Text-based diagram describing how data moves (e.g., Data -> [B, L, D] -> Model).",
+      "title": "Data Flow Diagram",
+      "type": "string"
+    },
+    "hyperparameters": {
+      "additionalProperties": {
+        "type": "string"
+      },
+      "title": "Hyperparameters",
+      "type": "object"
+    },
+    "main_execution_flow": {
+      "title": "Main Execution Flow",
+      "type": "string"
+    }
+  },
+  "required": [
+    "project_name",
+    "architecture_style",
+    "requirements",
+    "file_structure",
+    "data_flow_diagram",
+    "hyperparameters",
+    "main_execution_flow"
+  ],
+  "title": "DesignDocument",
+  "type": "object"
+}
+
+
+# Input Theory
+**Field**: Deep Learning and Time Series Forecasting
+**Methodology (The Math)**: 
+We propose a hybrid framework, Stormer, based on a standard transformer architecture incorporating the following: 1) A weather-specific embedding layer that models interactions among atmospheric variables; 2) A randomized dynamics forecasting objective that trains the model to predict weather dynamics over varying time intervals; 3) A pressure-weighted loss function that prioritizes near-surface variables. The training involves a multi-step finetuning process, enhancing the model's predictive accuracy. The inference strategy leverages combining multiple forecasts generated at different intervals, thus improving overall forecast reliability. The model architecture consists of L transformer blocks, each utilizing adaptive layer normalization and a cross-attention mechanism to effectively capture and model the relationships between input variables.
+
+**Gap Analysis (Targets)**:
+1) **Complexity Analysis**: The computational complexity for a single forward pass through the transformer block is O(T^2 d_{model}), where T is the sequence length and d_{model} is the hidden dimension. Each layer in Stormer processes V variables with a potential complexity of O(V H W) for the embedding layer. The overall complexity during training scales linearly with the number of training examples and model parameters. <br> 2) **Proof of Convergence**: Under the assumption of bounded loss functions and Lipschitz continuity of the model, we can invoke the properties of stochastic gradient descent (SGD) to establish convergence to a local minimum. Specifically, by adjusting the learning rate according to the decay schedule, we can show that the sequence of loss values converges almost surely to a finite limit as the number of iterations approaches infinity. <br> 3) **Performance Guarantees**: The randomized dynamics objective allows the model to explore multiple forecasting paths, thereby reducing the variance of predictions and enhancing the robustness against chaotic fluctuations inherent in weather data. The ensemble of forecasts generated through this strategy statistically improves accuracy, especially for longer lead times.
+
+**User Feedback / History**:
+
+            !!! REVISION REQUEST !!!
+            Previous design was rejected. Feedback:
+            "Optimize modularity and clarify logic steps."
+            Please fix the design accordingly.
+            
+
+# Task
+Design the full codebase.
+
+1. **Dependencies**: specific versions (requirements.txt).
+2. **File Structure**:
+   - For the CORE MODEL CLASS: Break it down into `__init__` and `forward`.
+   - In `core_logic_steps`: Write step-by-step pseudo-code matching the Math.
+3. **Data Flow**: Describe input/output shapes in docstrings.
+2025-12-06 00:22:37 | INFO     | LLM_TRACE | --------------------------------------------------
+2025-12-06 00:23:02 | INFO     | LLM_TRACE | ======== [RESPONSE] ========
+2025-12-06 00:23:02 | INFO     | LLM_TRACE | CONTENT:
+```json
+{
+  "project_name": "Stormer",
+  "architecture_style": "Hybrid Transformer for Time Series Forecasting",
+  "requirements": [
+    "torch==1.12.0",
+    "numpy==1.21.0",
+    "pandas==1.3.0"
+  ],
+  "file_structure": [
+    {
+      "filename": "src\\data\\preprocessing.py",
+      "description": "Data preprocessing routines for input time series data.",
+      "imports": [
+        "import pandas as pd",
+        "import numpy as np"
+      ],
+      "classes": [],
+      "functions": [
+        {
+          "name": "prepare_data",
+          "args": [
+            "data: pd.DataFrame",
+            "sequence_length: int"
+          ],
+          "return_type": "np.ndarray",
+          "docstring": "Prepares the input data for the model by creating sequences.",
+          "core_logic_steps": [
+            "1. Initialize an empty list for sequences.",
+            "2. For each index from 0 to len(data) - sequence_length:",
+            "   a. Append data[index:index + sequence_length] to sequences.",
+            "3. Convert sequences to a NumPy array and return."
+          ]
+        }
+      ]
+    },
+    {
+      "filename": "src\\models\\stormer.py",
+      "description": "Model definition for the Stormer transformer architecture.",
+      "imports": [
+        "import torch",
+        "import torch.nn as nn"
+      ],
+      "classes": [
+        {
+          "name": "StormerModel",
+          "inherits_from": "nn.Module",
+          "description": "Hybrid transformer model for weather forecasting.",
+          "attributes": [
+            "embedding_layer: nn.Embedding",
+            "transformer_blocks: nn.ModuleList",
+            "output_layer: nn.Linear"
+          ],
+          "methods": [
+            {
+              "name": "__init__",
+              "args": [
+                "self",
+                "num_variables: int",
+                "hidden_dim: int",
+                "num_layers: int"
+              ],
+              "return_type": "None",
+              "docstring": "Initializes the Stormer model components.",
+              "core_logic_steps": [
+                "1. Call the parent class constructor.",
+                "2. Initialize embedding_layer with nn.Embedding(num_variables, hidden_dim).",
+                "3. Initialize transformer_blocks as an empty ModuleList.",
+                "4. For i in range(num_layers):",
+                "   a. Append a new transformer block to transformer_blocks.",
+                "5. Initialize output_layer with nn.Linear(hidden_dim, num_variables)."
+              ]
+            },
+            {
+              "name": "forward",
+              "args": [
+                "self",
+                "x: torch.Tensor"
+              ],
+              "return_type": "torch.Tensor",
+              "docstring": "Performs the forward pass through the model.",
+              "core_logic_steps": [
+                "1. Pass x through the embedding_layer to get embeddings.",
+                "2. For each transformer block in transformer_blocks:",
+                "   a. Apply the block to the embeddings.",
+                "3. Pass the final output through the output_layer.",
+                "4. Return the final output."
+              ]
+            }
+          ]
+        }
+      ],
+      "functions": []
+    },
+    {
+      "filename": "src\\training\\train.py",
+      "description": "Training loop for the Stormer model.",
+      "imports": [
+        "import torch",
+        "import torch.optim as optim",
+        "from src.models.stormer import StormerModel",
+        "from src.data.preprocessing import prepare_data"
+      ],
+      "classes": [],
+      "functions": [
+        {
+          "name": "train_model",
+          "args": [
+            "model: StormerModel",
+            "train_data: np.ndarray",
+            "epochs: int",
+            "learning_rate: float"
+          ],
+          "return_type": "None",
+          "docstring": "Trains the Stormer model on the training data.",
+          "core_logic_steps": [
+            "1. Set model to training mode.",
+            "2. Initialize optimizer as optim.Adam with model parameters and learning_rate.",
+            "3. For epoch in range(epochs):",
+            "   a. For each batch in train_data:",
+            "      i. Zero the gradients.",
+            "      ii. Get model predictions by calling model.forward on the batch.",
+            "      iii. Calculate loss using pressure-weighted loss function.",
+            "      iv. Backpropagate the loss.",
+            "      v. Update model parameters using optimizer."
+          ]
+        }
+      ]
+    }
+  ],
+  "data_flow_diagram": "Input Data -> [Batch, Sequence Length, Variables] -> Model -> [Batch, Output Variables]",
+  "hyperparameters": {
+    "num_layers": "6",
+    "hidden_dim": "128",
+    "num_variables": "10",
+    "sequence_length": "30",
+    "learning_rate": "0.001",
+    "epochs": "50"
+  },
+  "main_execution_flow": "1. Load and preprocess data using prepare_data. 2. Initialize StormerModel with specified hyperparameters. 3. Train the model using train_model function."
+}
+```
+2025-12-06 00:23:02 | INFO     | LLM_TRACE | ============================================================
+
+2025-12-06 00:23:02 | INFO     | LLM_TRACE | ======== [REQUEST] Model: gpt-4o-mini ========
+2025-12-06 00:23:02 | INFO     | LLM_TRACE | URL: https://api.moleapi.com/v1
+2025-12-06 00:23:02 | INFO     | LLM_TRACE | PROMPT:
+You are the infamous **"Reviewer #2"** for a top-tier CS conference (e.g., CVPR, NeurIPS, S&P).
+You are skeptical, critical, and hard to please. You assume the submission is flawed until proven otherwise.
+
+**SCORING RUBRIC (Strict)**:
+- **1-4 (Strong Reject)**: Trivial idea, generic buzzwords, missing math, or lack of deep gap analysis.
+- **5-6 (Weak Reject)**: Good intuition but lacks theoretical depth (No Theorems/Proofs) or weak baselines.
+- **7 (Borderline)**: Technically sound but incremental novelty.
+- **8-10 (Accept)**: Groundbreaking novelty + Flawless Mathematical Proofs + Extensive SOTA comparison. **(Rarely give this)**.
+
+**HARD RULES**:
+1. If the Theory section has NO LaTeX equations, Max Score = 4.
+2. If the Gap Analysis is generic (e.g., "accuracy is low"), Max Score = 5.
+3. You MUST identify at least 2 specific weaknesses.
+
+**OUTPUT FORMAT**:
+Return only a JSON object shaped exactly like:
+{
+  "decision": "APPROVE" | "REVISE",
+  "score": 1-10 integer,
+  "critique": "Detailed weakness analysis",
+  "specific_instructions": "Actionable instructions"
+}
+Do **NOT** echo the schema definition or wrap the JSON in Markdown fences.
+
+Output strictly a JSON object matching the schema.
+Target Schema:
+{
+  "$defs": {
+    "ReviewDecision": {
+      "enum": [
+        "APPROVE",
+        "REVISE"
+      ],
+      "title": "ReviewDecision",
+      "type": "string"
+    }
+  },
+  "properties": {
+    "decision": {
+      "$ref": "#/$defs/ReviewDecision",
+      "description": "The final decision: APPROVE for next phase, or REVISE for improvements."
+    },
+    "score": {
+      "description": "Quality score from 1-10.",
+      "title": "Score",
+      "type": "integer"
+    },
+    "critique": {
+      "description": "Detailed critique of the work, highlighting weaknesses.",
+      "title": "Critique",
+      "type": "string"
+    },
+    "specific_instructions": {
+      "description": "If REJECT, provide specific actionable instructions for the next iteration.",
+      "title": "Specific Instructions",
+      "type": "string"
+    }
+  },
+  "required": [
+    "decision",
+    "score",
+    "critique",
+    "specific_instructions"
+  ],
+  "title": "ReviewReport",
+  "type": "object"
+}
+
+
+Phase: System Architecture & Code Design
+
+**Context**: Evaluating the proposed Python file structure and engineering design.
+
+**Critical Checks**:
+1. **Modularity**: Is everything in one file? (Reject). Are Data/Model/Train separated? (Accept).
+2. **Config**: Are hyperparameters hardcoded? (Reject). Is there a config system? (Accept).
+3. **Completeness**: Are `requirements.txt` and `main.py` flow defined?
+4. **Mapping**: Does the code structure actually implement the Math defined in the Theory?
+
+**Content**: 
+{'design': DesignDocument(project_name='Stormer', architecture_style='Hybrid Transformer for Time Series Forecasting', requirements=['torch==1.12.0', 'numpy==1.21.0', 'pandas==1.3.0'], file_structure=[FileSpec(filename='src\\data\\preprocessing.py', description='Data preprocessing routines for input time series data.', imports=['import pandas as pd', 'import numpy as np'], classes=[], functions=[MethodSpec(name='prepare_data', args=['data: pd.DataFrame', 'sequence_length: int'], return_type='np.ndarray', docstring='Prepares the input data for the model by creating sequences.', core_logic_steps=['1. Initialize an empty list for sequences.', '2. For each index from 0 to len(data) - sequence_length:', '   a. Append data[index:index + sequence_length] to sequences.', '3. Convert sequences to a NumPy array and return.'])]), FileSpec(filename='src\\models\\stormer.py', description='Model definition for the Stormer transformer architecture.', imports=['import torch', 'import torch.nn as nn'], classes=[ClassSpec(name='StormerModel', inherits_from='nn.Module', description='Hybrid transformer model for weather forecasting.', attributes=['embedding_layer: nn.Embedding', 'transformer_blocks: nn.ModuleList', 'output_layer: nn.Linear'], methods=[MethodSpec(name='__init__', args=['self', 'num_variables: int', 'hidden_dim: int', 'num_layers: int'], return_type='None', docstring='Initializes the Stormer model components.', core_logic_steps=['1. Call the parent class constructor.', '2. Initialize embedding_layer with nn.Embedding(num_variables, hidden_dim).', '3. Initialize transformer_blocks as an empty ModuleList.', '4. For i in range(num_layers):', '   a. Append a new transformer block to transformer_blocks.', '5. Initialize output_layer with nn.Linear(hidden_dim, num_variables).']), MethodSpec(name='forward', args=['self', 'x: torch.Tensor'], return_type='torch.Tensor', docstring='Performs the forward pass through the model.', core_logic_steps=['1. Pass x through the embedding_layer to get embeddings.', '2. For each transformer block in transformer_blocks:', '   a. Apply the block to the embeddings.', '3. Pass the final output through the output_layer.', '4. Return the final output.'])])], functions=[]), FileSpec(filename='src\\training\\train.py', description='Training loop for the Stormer model.', imports=['import torch', 'import torch.optim as optim', 'from src.models.stormer import StormerModel', 'from src.data.preprocessing import prepare_data'], classes=[], functions=[MethodSpec(name='train_model', args=['model: StormerModel', 'train_data: np.ndarray', 'epochs: int', 'learning_rate: float'], return_type='None', docstring='Trains the Stormer model on the training data.', core_logic_steps=['1. Set model to training mode.', '2. Initialize optimizer as optim.Adam with model parameters and learning_rate.', '3. For epoch in range(epochs):', '   a. For each batch in train_data:', '      i. Zero the gradients.', '      ii. Get model predictions by calling model.forward on the batch.', '      iii. Calculate loss using pressure-weighted loss function.', '      iv. Backpropagate the loss.', '      v. Update model parameters using optimizer.'])])], data_flow_diagram='Input Data -> [Batch, Sequence Length, Variables] -> Model -> [Batch, Output Variables]', hyperparameters={'num_layers': '6', 'hidden_dim': '128', 'num_variables': '10', 'sequence_length': '30', 'learning_rate': '0.001', 'epochs': '50'}, main_execution_flow='1. Load and preprocess data using prepare_data. 2. Initialize StormerModel with specified hyperparameters. 3. Train the model using train_model function.')}
+            **SPECIAL INSTRUCTION FOR ROUND 0**:
+            This is the FIRST DRAFT. Output 'decision': 'REVISE'. Max Score: 6.
+            Be extremely critical about structure and completeness.
+            
+2025-12-06 00:23:02 | INFO     | LLM_TRACE | --------------------------------------------------
+2025-12-06 00:23:09 | INFO     | LLM_TRACE | ======== [RESPONSE] ========
+2025-12-06 00:23:09 | INFO     | LLM_TRACE | CONTENT:
+{
+  "decision": "REVISE",
+  "score": 5,
+  "critique": "The proposed file structure demonstrates some modularity by separating data preprocessing, model definition, and training loop. However, there are significant weaknesses in the completeness and configurability of the design. Firstly, the hyperparameters are hardcoded within the code, which limits flexibility and makes it difficult to experiment with different configurations. A configuration system should be implemented to allow for easy adjustments. Secondly, while the `requirements.txt` is mentioned, it is unclear if it is properly defined and included in the project structure. Additionally, the main execution flow lacks clarity on how the components interact, particularly in terms of data flow and model training. Lastly, there is no evidence of a testing framework or validation process, which is critical for ensuring the robustness of the implementation.",
+  "specific_instructions": "1. Implement a configuration system to manage hyperparameters instead of hardcoding them. 2. Ensure that `requirements.txt` is properly defined and included in the project structure. 3. Clarify the main execution flow with detailed comments on how data flows through the system and how the components interact. 4. Consider adding a testing framework to validate the functionality of each component."
+}
+2025-12-06 00:23:09 | INFO     | LLM_TRACE | ============================================================
+
+2025-12-06 00:23:09 | INFO     | LLM_TRACE | ======== [REQUEST] Model: gpt-4o-mini ========
+2025-12-06 00:23:09 | INFO     | LLM_TRACE | URL: https://api.moleapi.com/v1
+2025-12-06 00:23:09 | INFO     | LLM_TRACE | PROMPT:
+You are a Principal Software Architect. 
+Your goal is to produce a **Low-Level Engineering Specification** based on a theoretical framework.
+
+**THE GOLDEN RULE**: The Coder should NOT have to guess algorithms. 
+- If the Theory says "Equation 3: h_t = A h_{t-1} + B x_t", you MUST describe this exact logic in the `core_logic_steps` of the corresponding method.
+- Define exact Tensor shapes (e.g., `[Batch, Time, Channels]`) in arguments and docstrings.
+- **Separation of Concerns**: Separate `Data Preprocessing`, `Model Definition`, and `Training Loop` into distinct files.
+
+**JSON FORMATTING**:
+- Escape all backslashes (e.g., `src\\models`).
+
+Output strictly a JSON object matching the schema.
+Target Schema:
+{
+  "$defs": {
+    "ClassSpec": {
+      "properties": {
+        "name": {
+          "description": "Class name, e.g., 'MambaBlock'",
+          "title": "Name",
+          "type": "string"
+        },
+        "inherits_from": {
+          "default": "nn.Module",
+          "description": "Parent class.",
+          "title": "Inherits From",
+          "type": "string"
+        },
+        "description": {
+          "description": "High-level purpose.",
+          "title": "Description",
+          "type": "string"
+        },
+        "attributes": {
+          "description": "Class attributes/fields to initialize in __init__.",
+          "items": {
+            "type": "string"
+          },
+          "title": "Attributes",
+          "type": "array"
+        },
+        "methods": {
+          "description": "List of methods.",
+          "items": {
+            "$ref": "#/$defs/MethodSpec"
+          },
+          "title": "Methods",
+          "type": "array"
+        }
+      },
+      "required": [
+        "name",
+        "description",
+        "attributes",
+        "methods"
+      ],
+      "title": "ClassSpec",
+      "type": "object"
+    },
+    "FileSpec": {
+      "properties": {
+        "filename": {
+          "description": "Path/Name, e.g., 'src/models/mamba.py'",
+          "title": "Filename",
+          "type": "string"
+        },
+        "description": {
+          "description": "Purpose of this file.",
+          "title": "Description",
+          "type": "string"
+        },
+        "imports": {
+          "description": "Key libraries to import.",
+          "items": {
+            "type": "string"
+          },
+          "title": "Imports",
+          "type": "array"
+        },
+        "classes": {
+          "default": [],
+          "description": "Classes to define.",
+          "items": {
+            "$ref": "#/$defs/ClassSpec"
+          },
+          "title": "Classes",
+          "type": "array"
+        },
+        "functions": {
+          "default": [],
+          "description": "Global functions.",
+          "items": {
+            "$ref": "#/$defs/MethodSpec"
+          },
+          "title": "Functions",
+          "type": "array"
+        }
+      },
+      "required": [
+        "filename",
+        "description",
+        "imports"
+      ],
+      "title": "FileSpec",
+      "type": "object"
+    },
+    "MethodSpec": {
+      "properties": {
+        "name": {
+          "description": "Method name, e.g., 'forward'",
+          "title": "Name",
+          "type": "string"
+        },
+        "args": {
+          "description": "Arguments with type hints, e.g., ['x: torch.Tensor', 'state: Optional[Tensor] = None']",
+          "items": {
+            "type": "string"
+          },
+          "title": "Args",
+          "type": "array"
+        },
+        "return_type": {
+          "description": "Return type, e.g., 'torch.Tensor'",
+          "title": "Return Type",
+          "type": "string"
+        },
+        "docstring": {
+          "description": "Brief explanation of what this method does.",
+          "title": "Docstring",
+          "type": "string"
+        },
+        "core_logic_steps": {
+          "description": "Step-by-step logic or pseudo-code. CRITICAL for complex math.",
+          "items": {
+            "type": "string"
+          },
+          "title": "Core Logic Steps",
+          "type": "array"
+        }
+      },
+      "required": [
+        "name",
+        "args",
+        "return_type",
+        "docstring",
+        "core_logic_steps"
+      ],
+      "title": "MethodSpec",
+      "type": "object"
+    }
+  },
+  "properties": {
+    "project_name": {
+      "title": "Project Name",
+      "type": "string"
+    },
+    "architecture_style": {
+      "title": "Architecture Style",
+      "type": "string"
+    },
+    "requirements": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Requirements",
+      "type": "array"
+    },
+    "file_structure": {
+      "items": {
+        "$ref": "#/$defs/FileSpec"
+      },
+      "title": "File Structure",
+      "type": "array"
+    },
+    "data_flow_diagram": {
+      "description": "Text-based diagram describing how data moves (e.g., Data -> [B, L, D] -> Model).",
+      "title": "Data Flow Diagram",
+      "type": "string"
+    },
+    "hyperparameters": {
+      "additionalProperties": {
+        "type": "string"
+      },
+      "title": "Hyperparameters",
+      "type": "object"
+    },
+    "main_execution_flow": {
+      "title": "Main Execution Flow",
+      "type": "string"
+    }
+  },
+  "required": [
+    "project_name",
+    "architecture_style",
+    "requirements",
+    "file_structure",
+    "data_flow_diagram",
+    "hyperparameters",
+    "main_execution_flow"
+  ],
+  "title": "DesignDocument",
+  "type": "object"
+}
+
+
+# Input Theory
+**Field**: Deep Learning and Time Series Forecasting
+**Methodology (The Math)**: 
+We propose a hybrid framework, Stormer, based on a standard transformer architecture incorporating the following: 1) A weather-specific embedding layer that models interactions among atmospheric variables; 2) A randomized dynamics forecasting objective that trains the model to predict weather dynamics over varying time intervals; 3) A pressure-weighted loss function that prioritizes near-surface variables. The training involves a multi-step finetuning process, enhancing the model's predictive accuracy. The inference strategy leverages combining multiple forecasts generated at different intervals, thus improving overall forecast reliability. The model architecture consists of L transformer blocks, each utilizing adaptive layer normalization and a cross-attention mechanism to effectively capture and model the relationships between input variables.
+
+**Gap Analysis (Targets)**:
+1) **Complexity Analysis**: The computational complexity for a single forward pass through the transformer block is O(T^2 d_{model}), where T is the sequence length and d_{model} is the hidden dimension. Each layer in Stormer processes V variables with a potential complexity of O(V H W) for the embedding layer. The overall complexity during training scales linearly with the number of training examples and model parameters. <br> 2) **Proof of Convergence**: Under the assumption of bounded loss functions and Lipschitz continuity of the model, we can invoke the properties of stochastic gradient descent (SGD) to establish convergence to a local minimum. Specifically, by adjusting the learning rate according to the decay schedule, we can show that the sequence of loss values converges almost surely to a finite limit as the number of iterations approaches infinity. <br> 3) **Performance Guarantees**: The randomized dynamics objective allows the model to explore multiple forecasting paths, thereby reducing the variance of predictions and enhancing the robustness against chaotic fluctuations inherent in weather data. The ensemble of forecasts generated through this strategy statistically improves accuracy, especially for longer lead times.
+
+**User Feedback / History**:
+
+            !!! REVISION REQUEST !!!
+            Previous design was rejected. Feedback:
+            "1. Implement a configuration system to manage hyperparameters instead of hardcoding them. 2. Ensure that `requirements.txt` is properly defined and included in the project structure. 3. Clarify the main execution flow with detailed comments on how data flows through the system and how the components interact. 4. Consider adding a testing framework to validate the functionality of each component."
+            Please fix the design accordingly.
+            
+
+# Task
+Design the full codebase.
+
+1. **Dependencies**: specific versions (requirements.txt).
+2. **File Structure**:
+   - For the CORE MODEL CLASS: Break it down into `__init__` and `forward`.
+   - In `core_logic_steps`: Write step-by-step pseudo-code matching the Math.
+3. **Data Flow**: Describe input/output shapes in docstrings.
+2025-12-06 00:23:09 | INFO     | LLM_TRACE | --------------------------------------------------
+2025-12-06 00:23:34 | INFO     | LLM_TRACE | ======== [RESPONSE] ========
+2025-12-06 00:23:34 | INFO     | LLM_TRACE | CONTENT:
+```json
+{
+  "project_name": "Stormer",
+  "architecture_style": "Hybrid Transformer for Time Series Forecasting",
+  "requirements": [
+    "torch==1.12.1",
+    "numpy==1.21.2",
+    "pandas==1.3.3",
+    "scikit-learn==0.24.2",
+    "matplotlib==3.4.3"
+  ],
+  "file_structure": [
+    {
+      "filename": "src\\data\\preprocessing.py",
+      "description": "Data preprocessing utilities for loading and transforming weather data.",
+      "imports": [
+        "import pandas as pd",
+        "import numpy as np"
+      ],
+      "classes": [],
+      "functions": [
+        {
+          "name": "load_data",
+          "args": [
+            "file_path: str"
+          ],
+          "return_type": "pd.DataFrame",
+          "docstring": "Load weather data from a CSV file.",
+          "core_logic_steps": [
+            "Read the CSV file into a DataFrame.",
+            "Return the DataFrame."
+          ]
+        },
+        {
+          "name": "normalize_data",
+          "args": [
+            "data: pd.DataFrame"
+          ],
+          "return_type": "pd.DataFrame",
+          "docstring": "Normalize the weather data.",
+          "core_logic_steps": [
+            "Calculate the mean and standard deviation of the data.",
+            "Subtract the mean and divide by the standard deviation for each column.",
+            "Return the normalized DataFrame."
+          ]
+        }
+      ]
+    },
+    {
+      "filename": "src\\models\\stormer.py",
+      "description": "Implementation of the Stormer model based on transformer architecture.",
+      "imports": [
+        "import torch",
+        "import torch.nn as nn"
+      ],
+      "classes": [
+        {
+          "name": "StormerModel",
+          "inherits_from": "nn.Module",
+          "description": "Hybrid transformer model for weather forecasting.",
+          "attributes": [
+            "embedding: nn.Linear",
+            "transformer_blocks: nn.ModuleList",
+            "layer_norm: nn.LayerNorm",
+            "output_layer: nn.Linear"
+          ],
+          "methods": [
+            {
+              "name": "__init__",
+              "args": [
+                "self",
+                "input_dim: int",
+                "hidden_dim: int",
+                "num_layers: int"
+              ],
+              "return_type": "None",
+              "docstring": "Initialize the Stormer model with embedding and transformer blocks.",
+              "core_logic_steps": [
+                "Initialize embedding layer with input_dim.",
+                "Create an empty ModuleList for transformer_blocks.",
+                "For i in range(num_layers):",
+                "    Append a new transformer block to transformer_blocks.",
+                "Initialize layer normalization.",
+                "Initialize output layer with hidden_dim."
+              ]
+            },
+            {
+              "name": "forward",
+              "args": [
+                "self",
+                "x: torch.Tensor",
+                "time_steps: torch.Tensor"
+              ],
+              "return_type": "torch.Tensor",
+              "docstring": "Forward pass through the Stormer model.",
+              "core_logic_steps": [
+                "Input x has shape [Batch, Time, Features].",
+                "Pass x through the embedding layer to get embedded_x.",
+                "For each transformer block in transformer_blocks:",
+                "    Update embedded_x by passing it through the block.",
+                "Apply layer normalization to the final output.",
+                "Pass the normalized output through the output layer.",
+                "Return the final output."
+              ]
+            }
+          ]
+        }
+      ],
+      "functions": []
+    },
+    {
+      "filename": "src\\train\\training_loop.py",
+      "description": "Training loop for the Stormer model.",
+      "imports": [
+        "import torch",
+        "import torch.optim as optim",
+        "from src.models.stormer import StormerModel",
+        "from src.data.preprocessing import load_data, normalize_data"
+      ],
+      "classes": [],
+      "functions": [
+        {
+          "name": "train_model",
+          "args": [
+            "model: StormerModel",
+            "train_loader: DataLoader",
+            "num_epochs: int",
+            "learning_rate: float"
+          ],
+          "return_type": "None",
+          "docstring": "Train the Stormer model over a number of epochs.",
+          "core_logic_steps": [
+            "Initialize the optimizer with model parameters and learning_rate.",
+            "For epoch in range(num_epochs):",
+            "    For batch in train_loader:",
+            "        Get input data and labels from batch.",
+            "        Zero the gradients.",
+            "        Forward pass through the model to get predictions.",
+            "        Calculate the loss using the pressure-weighted loss function.",
+            "        Backpropagate the loss.",
+            "        Update model parameters using optimizer."
+          ]
+        }
+      ]
+    }
+  ],
+  "data_flow_diagram": "Data -> [Batch, Time, Features] -> Model -> [Batch, Time, Output]",
+  "hyperparameters": {
+    "learning_rate": "0.001",
+    "num_epochs": "100",
+    "batch_size": "32",
+    "input_dim": "10",
+    "hidden_dim": "64",
+    "num_layers": "6"
+  },
+  "main_execution_flow": "1. Load the data using load_data(). 2. Normalize the data using normalize_data(). 3. Create an instance of StormerModel. 4. Set up the training loop with train_model()."
+}
+```
+2025-12-06 00:23:34 | INFO     | LLM_TRACE | ============================================================
+
+2025-12-06 00:23:34 | INFO     | LLM_TRACE | ======== [REQUEST] Model: gpt-4o-mini ========
+2025-12-06 00:23:34 | INFO     | LLM_TRACE | URL: https://api.moleapi.com/v1
+2025-12-06 00:23:34 | INFO     | LLM_TRACE | PROMPT:
+You are the infamous **"Reviewer #2"** for a top-tier CS conference (e.g., CVPR, NeurIPS, S&P).
+You are skeptical, critical, and hard to please. You assume the submission is flawed until proven otherwise.
+
+**SCORING RUBRIC (Strict)**:
+- **1-4 (Strong Reject)**: Trivial idea, generic buzzwords, missing math, or lack of deep gap analysis.
+- **5-6 (Weak Reject)**: Good intuition but lacks theoretical depth (No Theorems/Proofs) or weak baselines.
+- **7 (Borderline)**: Technically sound but incremental novelty.
+- **8-10 (Accept)**: Groundbreaking novelty + Flawless Mathematical Proofs + Extensive SOTA comparison. **(Rarely give this)**.
+
+**HARD RULES**:
+1. If the Theory section has NO LaTeX equations, Max Score = 4.
+2. If the Gap Analysis is generic (e.g., "accuracy is low"), Max Score = 5.
+3. You MUST identify at least 2 specific weaknesses.
+
+**OUTPUT FORMAT**:
+Return only a JSON object shaped exactly like:
+{
+  "decision": "APPROVE" | "REVISE",
+  "score": 1-10 integer,
+  "critique": "Detailed weakness analysis",
+  "specific_instructions": "Actionable instructions"
+}
+Do **NOT** echo the schema definition or wrap the JSON in Markdown fences.
+
+Output strictly a JSON object matching the schema.
+Target Schema:
+{
+  "$defs": {
+    "ReviewDecision": {
+      "enum": [
+        "APPROVE",
+        "REVISE"
+      ],
+      "title": "ReviewDecision",
+      "type": "string"
+    }
+  },
+  "properties": {
+    "decision": {
+      "$ref": "#/$defs/ReviewDecision",
+      "description": "The final decision: APPROVE for next phase, or REVISE for improvements."
+    },
+    "score": {
+      "description": "Quality score from 1-10.",
+      "title": "Score",
+      "type": "integer"
+    },
+    "critique": {
+      "description": "Detailed critique of the work, highlighting weaknesses.",
+      "title": "Critique",
+      "type": "string"
+    },
+    "specific_instructions": {
+      "description": "If REJECT, provide specific actionable instructions for the next iteration.",
+      "title": "Specific Instructions",
+      "type": "string"
+    }
+  },
+  "required": [
+    "decision",
+    "score",
+    "critique",
+    "specific_instructions"
+  ],
+  "title": "ReviewReport",
+  "type": "object"
+}
+
+
+Phase: System Architecture & Code Design
+
+**Context**: Evaluating the proposed Python file structure and engineering design.
+
+**Critical Checks**:
+1. **Modularity**: Is everything in one file? (Reject). Are Data/Model/Train separated? (Accept).
+2. **Config**: Are hyperparameters hardcoded? (Reject). Is there a config system? (Accept).
+3. **Completeness**: Are `requirements.txt` and `main.py` flow defined?
+4. **Mapping**: Does the code structure actually implement the Math defined in the Theory?
+
+**Content**: 
+{'design': DesignDocument(project_name='Stormer', architecture_style='Hybrid Transformer for Time Series Forecasting', requirements=['torch==1.12.1', 'numpy==1.21.2', 'pandas==1.3.3', 'scikit-learn==0.24.2', 'matplotlib==3.4.3'], file_structure=[FileSpec(filename='src\\data\\preprocessing.py', description='Data preprocessing utilities for loading and transforming weather data.', imports=['import pandas as pd', 'import numpy as np'], classes=[], functions=[MethodSpec(name='load_data', args=['file_path: str'], return_type='pd.DataFrame', docstring='Load weather data from a CSV file.', core_logic_steps=['Read the CSV file into a DataFrame.', 'Return the DataFrame.']), MethodSpec(name='normalize_data', args=['data: pd.DataFrame'], return_type='pd.DataFrame', docstring='Normalize the weather data.', core_logic_steps=['Calculate the mean and standard deviation of the data.', 'Subtract the mean and divide by the standard deviation for each column.', 'Return the normalized DataFrame.'])]), FileSpec(filename='src\\models\\stormer.py', description='Implementation of the Stormer model based on transformer architecture.', imports=['import torch', 'import torch.nn as nn'], classes=[ClassSpec(name='StormerModel', inherits_from='nn.Module', description='Hybrid transformer model for weather forecasting.', attributes=['embedding: nn.Linear', 'transformer_blocks: nn.ModuleList', 'layer_norm: nn.LayerNorm', 'output_layer: nn.Linear'], methods=[MethodSpec(name='__init__', args=['self', 'input_dim: int', 'hidden_dim: int', 'num_layers: int'], return_type='None', docstring='Initialize the Stormer model with embedding and transformer blocks.', core_logic_steps=['Initialize embedding layer with input_dim.', 'Create an empty ModuleList for transformer_blocks.', 'For i in range(num_layers):', '    Append a new transformer block to transformer_blocks.', 'Initialize layer normalization.', 'Initialize output layer with hidden_dim.']), MethodSpec(name='forward', args=['self', 'x: torch.Tensor', 'time_steps: torch.Tensor'], return_type='torch.Tensor', docstring='Forward pass through the Stormer model.', core_logic_steps=['Input x has shape [Batch, Time, Features].', 'Pass x through the embedding layer to get embedded_x.', 'For each transformer block in transformer_blocks:', '    Update embedded_x by passing it through the block.', 'Apply layer normalization to the final output.', 'Pass the normalized output through the output layer.', 'Return the final output.'])])], functions=[]), FileSpec(filename='src\\train\\training_loop.py', description='Training loop for the Stormer model.', imports=['import torch', 'import torch.optim as optim', 'from src.models.stormer import StormerModel', 'from src.data.preprocessing import load_data, normalize_data'], classes=[], functions=[MethodSpec(name='train_model', args=['model: StormerModel', 'train_loader: DataLoader', 'num_epochs: int', 'learning_rate: float'], return_type='None', docstring='Train the Stormer model over a number of epochs.', core_logic_steps=['Initialize the optimizer with model parameters and learning_rate.', 'For epoch in range(num_epochs):', '    For batch in train_loader:', '        Get input data and labels from batch.', '        Zero the gradients.', '        Forward pass through the model to get predictions.', '        Calculate the loss using the pressure-weighted loss function.', '        Backpropagate the loss.', '        Update model parameters using optimizer.'])])], data_flow_diagram='Data -> [Batch, Time, Features] -> Model -> [Batch, Time, Output]', hyperparameters={'learning_rate': '0.001', 'num_epochs': '100', 'batch_size': '32', 'input_dim': '10', 'hidden_dim': '64', 'num_layers': '6'}, main_execution_flow='1. Load the data using load_data(). 2. Normalize the data using normalize_data(). 3. Create an instance of StormerModel. 4. Set up the training loop with train_model().')}
+2025-12-06 00:23:34 | INFO     | LLM_TRACE | --------------------------------------------------
+2025-12-06 00:23:39 | INFO     | LLM_TRACE | ======== [RESPONSE] ========
+2025-12-06 00:23:39 | INFO     | LLM_TRACE | CONTENT:
+{
+  "decision": "REVISE",
+  "score": 5,
+  "critique": "The proposed design has some modularity, with separate files for data preprocessing, model implementation, and training loop. However, the hyperparameters are hardcoded within the code, which is a significant flaw as it limits flexibility and reproducibility. Additionally, while the file structure is somewhat organized, there is a lack of a clear configuration management system to handle these parameters effectively. Furthermore, the documentation could be improved to provide more clarity on the overall architecture and flow of the system.",
+  "specific_instructions": "1. Implement a configuration management system (e.g., using a YAML or JSON file) to handle hyperparameters instead of hardcoding them. 2. Enhance the documentation to provide a clearer overview of the architecture and how the components interact. 3. Consider adding unit tests to ensure the reliability of each module."
+}
+2025-12-06 00:23:39 | INFO     | LLM_TRACE | ============================================================
+
+2025-12-06 00:59:03 | INFO     | LLM_TRACE | ======== [REQUEST] Model: gpt-4o-mini ========
+2025-12-06 00:59:03 | INFO     | LLM_TRACE | URL: https://api.moleapi.com/v1
+2025-12-06 00:59:03 | INFO     | LLM_TRACE | PROMPT:
+You are an academic search assistant.
+The user will provide a research context.
+
+Your task:
+1. Analyze the context to understand the *current* research goal.
+2. Extract 3 effective, specific academic search queries.
+3. **CRITICAL RULES**:
+   - Keep queries concise (max 3-6 keywords).
+   - Use Keyword-based search (e.g., "Mamba time series forecasting"), NOT natural language sentences.
+   - Remove stop words.
+   - Return the final answer as a JSON object of the form `{ "queries": ["..."] }`. Do **NOT** echo the schema definition or any metadata.
+4. Example Output:
+   {
+     "queries": [
+       "mamba time series forecasting",
+       "state space models weather",
+       "multiscale transformer meteorology"
+     ]
+   }
+
+Output strictly a JSON object matching the schema.
+Target Schema: 
+{
+  "properties": {
+    "queries": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Queries",
+      "type": "array"
+    }
+  },
+  "required": [
+    "queries"
+  ],
+  "title": "SearchQueries",
+  "type": "object"
+}
+
+User Research Context: 
+"""
+I want to use Mamba state space models for time series forecasting on weather data, comparing it with Transformer.
+"""
+
+2025-12-06 00:59:03 | INFO     | LLM_TRACE | --------------------------------------------------
+2025-12-06 00:59:12 | ERROR    | LLM_TRACE | LLM Call Failed: Error code: 429 - {'error': {'message': 'Rate limit reached for gpt-4o-mini in organization org-N8bQVcEvwbsLtGGG9n6QzsKr on requests per day (RPD): Limit 10000, Used 10000, Requested 1. Please try again in 8.64s. Visit https://***.com/***/*** to learn more. (request id: 20251206005910832676289aRfcH491)', 'type': 'openai_error', 'param': '', 'code': 'rate_limit_exceeded'}}
+2025-12-06 00:59:12 | INFO     | LLM_TRACE | ======== [REQUEST] Model: gpt-4o-mini ========
+2025-12-06 00:59:12 | INFO     | LLM_TRACE | URL: https://api.moleapi.com/v1
+2025-12-06 00:59:12 | INFO     | LLM_TRACE | PROMPT:
+You are an academic search assistant.
+The user will provide a research context.
+
+Your task:
+1. Analyze the context to understand the *current* research goal.
+2. Extract 3 effective, specific academic search queries.
+3. **CRITICAL RULES**:
+   - Keep queries concise (max 3-6 keywords).
+   - Use Keyword-based search (e.g., "Mamba time series forecasting"), NOT natural language sentences.
+   - Remove stop words.
+   - Return the final answer as a JSON object of the form `{ "queries": ["..."] }`. Do **NOT** echo the schema definition or any metadata.
+4. Example Output:
+   {
+     "queries": [
+       "mamba time series forecasting",
+       "state space models weather",
+       "multiscale transformer meteorology"
+     ]
+   }
+
+Output strictly a JSON object matching the schema.
+Target Schema: 
+{
+  "properties": {
+    "queries": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Queries",
+      "type": "array"
+    }
+  },
+  "required": [
+    "queries"
+  ],
+  "title": "SearchQueries",
+  "type": "object"
+}
+
+User Research Context: 
+"""
+I want to use Mamba state space models for time series forecasting on weather data, comparing it with Transformer.
+"""
+
+2025-12-06 00:59:12 | INFO     | LLM_TRACE | --------------------------------------------------
+2025-12-06 00:59:17 | ERROR    | LLM_TRACE | LLM Call Failed: Error code: 429 - {'error': {'message': 'Rate limit reached for gpt-4o-mini in organization org-N8bQVcEvwbsLtGGG9n6QzsKr on requests per day (RPD): Limit 10000, Used 10000, Requested 1. Please try again in 8.64s. Visit https://***.com/***/*** to learn more. (request id: 20251206005916444423395STu9cXyG)', 'type': 'openai_error', 'param': '', 'code': 'rate_limit_exceeded'}}
+2025-12-06 00:59:17 | INFO     | LLM_TRACE | ======== [REQUEST] Model: gpt-4o-mini ========
+2025-12-06 00:59:17 | INFO     | LLM_TRACE | URL: https://api.moleapi.com/v1
+2025-12-06 00:59:17 | INFO     | LLM_TRACE | PROMPT:
+You are an academic search assistant.
+The user will provide a research context.
+
+Your task:
+1. Analyze the context to understand the *current* research goal.
+2. Extract 3 effective, specific academic search queries.
+3. **CRITICAL RULES**:
+   - Keep queries concise (max 3-6 keywords).
+   - Use Keyword-based search (e.g., "Mamba time series forecasting"), NOT natural language sentences.
+   - Remove stop words.
+   - Return the final answer as a JSON object of the form `{ "queries": ["..."] }`. Do **NOT** echo the schema definition or any metadata.
+4. Example Output:
+   {
+     "queries": [
+       "mamba time series forecasting",
+       "state space models weather",
+       "multiscale transformer meteorology"
+     ]
+   }
+
+Output strictly a JSON object matching the schema.
+Target Schema: 
+{
+  "properties": {
+    "queries": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Queries",
+      "type": "array"
+    }
+  },
+  "required": [
+    "queries"
+  ],
+  "title": "SearchQueries",
+  "type": "object"
+}
+
+User Research Context: 
+"""
+I want to use Mamba state space models for time series forecasting on weather data, comparing it with Transformer.
+"""
+
+2025-12-06 00:59:17 | INFO     | LLM_TRACE | --------------------------------------------------
+2025-12-06 00:59:26 | ERROR    | LLM_TRACE | LLM Call Failed: Error code: 429 - {'error': {'message': 'Rate limit reached for gpt-4o-mini in organization org-N8bQVcEvwbsLtGGG9n6QzsKr on requests per day (RPD): Limit 10000, Used 10000, Requested 1. Please try again in 8.64s. Visit https://***.com/***/*** to learn more. (request id: 20251206005923847979924f7MxGES0)', 'type': 'openai_error', 'param': '', 'code': 'rate_limit_exceeded'}}
+2025-12-06 00:59:26 | INFO     | LLM_TRACE | ======== [REQUEST] Model: gpt-4o-mini ========
+2025-12-06 00:59:26 | INFO     | LLM_TRACE | URL: https://api.moleapi.com/v1
+2025-12-06 00:59:26 | INFO     | LLM_TRACE | PROMPT:
+You are an academic search assistant.
+The user will provide a research context.
+
+Your task:
+1. Analyze the context to understand the *current* research goal.
+2. Extract 3 effective, specific academic search queries.
+3. **CRITICAL RULES**:
+   - Keep queries concise (max 3-6 keywords).
+   - Use Keyword-based search (e.g., "Mamba time series forecasting"), NOT natural language sentences.
+   - Remove stop words.
+   - Return the final answer as a JSON object of the form `{ "queries": ["..."] }`. Do **NOT** echo the schema definition or any metadata.
+4. Example Output:
+   {
+     "queries": [
+       "mamba time series forecasting",
+       "state space models weather",
+       "multiscale transformer meteorology"
+     ]
+   }
+
+Output strictly a JSON object matching the schema.
+Target Schema: 
+{
+  "properties": {
+    "queries": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Queries",
+      "type": "array"
+    }
+  },
+  "required": [
+    "queries"
+  ],
+  "title": "SearchQueries",
+  "type": "object"
+}
+
+User Research Context: 
+"""
+I want to use Mamba state space models for time series forecasting on weather data, comparing it with Transformer.
+"""
+
+2025-12-06 00:59:26 | INFO     | LLM_TRACE | --------------------------------------------------
+2025-12-06 00:59:30 | ERROR    | LLM_TRACE | LLM Call Failed: Error code: 429 - {'error': {'message': 'Rate limit reached for gpt-4o-mini in organization org-N8bQVcEvwbsLtGGG9n6QzsKr on requests per day (RPD): Limit 10000, Used 10000, Requested 1. Please try again in 8.64s. Visit https://***.com/***/*** to learn more. (request id: 2025120600592840555458957OYryBO)', 'type': 'openai_error', 'param': '', 'code': 'rate_limit_exceeded'}}
+2025-12-06 00:59:30 | INFO     | LLM_TRACE | ======== [REQUEST] Model: gpt-4o-mini ========
+2025-12-06 00:59:30 | INFO     | LLM_TRACE | URL: https://api.moleapi.com/v1
+2025-12-06 00:59:30 | INFO     | LLM_TRACE | PROMPT:
+You are an academic search assistant.
+The user will provide a research context.
+
+Your task:
+1. Analyze the context to understand the *current* research goal.
+2. Extract 3 effective, specific academic search queries.
+3. **CRITICAL RULES**:
+   - Keep queries concise (max 3-6 keywords).
+   - Use Keyword-based search (e.g., "Mamba time series forecasting"), NOT natural language sentences.
+   - Remove stop words.
+   - Return the final answer as a JSON object of the form `{ "queries": ["..."] }`. Do **NOT** echo the schema definition or any metadata.
+4. Example Output:
+   {
+     "queries": [
+       "mamba time series forecasting",
+       "state space models weather",
+       "multiscale transformer meteorology"
+     ]
+   }
+
+Output strictly a JSON object matching the schema.
+Target Schema: 
+{
+  "properties": {
+    "queries": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Queries",
+      "type": "array"
+    }
+  },
+  "required": [
+    "queries"
+  ],
+  "title": "SearchQueries",
+  "type": "object"
+}
+
+User Research Context: 
+"""
+I want to use Mamba state space models for time series forecasting on weather data, comparing it with Transformer.
+"""
+
+2025-12-06 00:59:30 | INFO     | LLM_TRACE | --------------------------------------------------
+2025-12-06 00:59:32 | ERROR    | LLM_TRACE | LLM Call Failed: Error code: 429 - {'error': {'message': 'Rate limit reached for gpt-4o-mini in organization org-N8bQVcEvwbsLtGGG9n6QzsKr on requests per day (RPD): Limit 10000, Used 10000, Requested 1. Please try again in 8.64s. Visit https://***.com/***/*** to learn more. (request id: 20251206005931948745610popubV6A)', 'type': 'openai_error', 'param': '', 'code': 'rate_limit_exceeded'}}
+2025-12-06 00:59:32 | INFO     | LLM_TRACE | ======== [REQUEST] Model: gpt-4o-mini ========
+2025-12-06 00:59:32 | INFO     | LLM_TRACE | URL: https://api.moleapi.com/v1
+2025-12-06 00:59:32 | INFO     | LLM_TRACE | PROMPT:
+You are an academic search assistant.
+The user will provide a research context.
+
+Your task:
+1. Analyze the context to understand the *current* research goal.
+2. Extract 3 effective, specific academic search queries.
+3. **CRITICAL RULES**:
+   - Keep queries concise (max 3-6 keywords).
+   - Use Keyword-based search (e.g., "Mamba time series forecasting"), NOT natural language sentences.
+   - Remove stop words.
+   - Return the final answer as a JSON object of the form `{ "queries": ["..."] }`. Do **NOT** echo the schema definition or any metadata.
+4. Example Output:
+   {
+     "queries": [
+       "mamba time series forecasting",
+       "state space models weather",
+       "multiscale transformer meteorology"
+     ]
+   }
+
+Output strictly a JSON object matching the schema.
+Target Schema: 
+{
+  "properties": {
+    "queries": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Queries",
+      "type": "array"
+    }
+  },
+  "required": [
+    "queries"
+  ],
+  "title": "SearchQueries",
+  "type": "object"
+}
+
+User Research Context: 
+"""
+I want to use Mamba state space models for time series forecasting on weather data, comparing it with Transformer.
+"""
+
+2025-12-06 00:59:32 | INFO     | LLM_TRACE | --------------------------------------------------
+2025-12-06 01:00:42 | INFO     | LLM_TRACE | ======== [REQUEST] Model: gpt-4o-mini ========
+2025-12-06 01:00:42 | INFO     | LLM_TRACE | URL: https://api.moleapi.com/v1
+2025-12-06 01:00:42 | INFO     | LLM_TRACE | PROMPT:
+You are an academic search assistant.
+The user will provide a research context.
+
+Your task:
+1. Analyze the context to understand the *current* research goal.
+2. Extract 3 effective, specific academic search queries.
+3. **CRITICAL RULES**:
+   - Keep queries concise (max 3-6 keywords).
+   - Use Keyword-based search (e.g., "Mamba time series forecasting"), NOT natural language sentences.
+   - Remove stop words.
+   - Return the final answer as a JSON object of the form `{ "queries": ["..."] }`. Do **NOT** echo the schema definition or any metadata.
+4. Example Output:
+   {
+     "queries": [
+       "mamba time series forecasting",
+       "state space models weather",
+       "multiscale transformer meteorology"
+     ]
+   }
+
+Output strictly a JSON object matching the schema.
+Target Schema: 
+{
+  "properties": {
+    "queries": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Queries",
+      "type": "array"
+    }
+  },
+  "required": [
+    "queries"
+  ],
+  "title": "SearchQueries",
+  "type": "object"
+}
+
+User Research Context: 
+"""
+I want to use Mamba state space models for time series forecasting on weather data, comparing it with Transformer.
+"""
+
+2025-12-06 01:00:42 | INFO     | LLM_TRACE | --------------------------------------------------
+2025-12-06 01:00:46 | ERROR    | LLM_TRACE | LLM Call Failed: Error code: 429 - {'error': {'message': 'Rate limit reached for gpt-4o-mini in organization org-N8bQVcEvwbsLtGGG9n6QzsKr on requests per day (RPD): Limit 10000, Used 10000, Requested 1. Please try again in 8.64s. Visit https://***.com/***/*** to learn more. (request id: 202512060100442612518262X3hcTdr)', 'type': 'openai_error', 'param': '', 'code': 'rate_limit_exceeded'}}
+2025-12-06 01:00:46 | INFO     | LLM_TRACE | ======== [REQUEST] Model: gpt-4o-mini ========
+2025-12-06 01:00:46 | INFO     | LLM_TRACE | URL: https://api.moleapi.com/v1
+2025-12-06 01:00:46 | INFO     | LLM_TRACE | PROMPT:
+You are an academic search assistant.
+The user will provide a research context.
+
+Your task:
+1. Analyze the context to understand the *current* research goal.
+2. Extract 3 effective, specific academic search queries.
+3. **CRITICAL RULES**:
+   - Keep queries concise (max 3-6 keywords).
+   - Use Keyword-based search (e.g., "Mamba time series forecasting"), NOT natural language sentences.
+   - Remove stop words.
+   - Return the final answer as a JSON object of the form `{ "queries": ["..."] }`. Do **NOT** echo the schema definition or any metadata.
+4. Example Output:
+   {
+     "queries": [
+       "mamba time series forecasting",
+       "state space models weather",
+       "multiscale transformer meteorology"
+     ]
+   }
+
+Output strictly a JSON object matching the schema.
+Target Schema: 
+{
+  "properties": {
+    "queries": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Queries",
+      "type": "array"
+    }
+  },
+  "required": [
+    "queries"
+  ],
+  "title": "SearchQueries",
+  "type": "object"
+}
+
+User Research Context: 
+"""
+I want to use Mamba state space models for time series forecasting on weather data, comparing it with Transformer.
+"""
+
+2025-12-06 01:00:46 | INFO     | LLM_TRACE | --------------------------------------------------
+2025-12-06 01:01:59 | INFO     | LLM_TRACE | ======== [REQUEST] Model: gpt-4o-mini ========
+2025-12-06 01:01:59 | INFO     | LLM_TRACE | URL: https://api.moleapi.com/v1
+2025-12-06 01:01:59 | INFO     | LLM_TRACE | PROMPT:
+You are an academic search assistant.
+The user will provide a research context.
+
+Your task:
+1. Analyze the context to understand the *current* research goal.
+2. Extract 3 effective, specific academic search queries.
+3. **CRITICAL RULES**:
+   - Keep queries concise (max 3-6 keywords).
+   - Use Keyword-based search (e.g., "Mamba time series forecasting"), NOT natural language sentences.
+   - Remove stop words.
+   - Return the final answer as a JSON object of the form `{ "queries": ["..."] }`. Do **NOT** echo the schema definition or any metadata.
+4. Example Output:
+   {
+     "queries": [
+       "mamba time series forecasting",
+       "state space models weather",
+       "multiscale transformer meteorology"
+     ]
+   }
+
+Output strictly a JSON object matching the schema.
+Target Schema: 
+{
+  "properties": {
+    "queries": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Queries",
+      "type": "array"
+    }
+  },
+  "required": [
+    "queries"
+  ],
+  "title": "SearchQueries",
+  "type": "object"
+}
+
+User Research Context: 
+"""
+I want to use Mamba state space models for time series forecasting on weather data, comparing it with Transformer.
+"""
+
+2025-12-06 01:01:59 | INFO     | LLM_TRACE | --------------------------------------------------
+2025-12-06 01:02:20 | ERROR    | LLM_TRACE | LLM Call Failed: Error code: 429 - {'error': {'message': 'Rate limit reached for gpt-4o-mini in organization org-N8bQVcEvwbsLtGGG9n6QzsKr on requests per day (RPD): Limit 10000, Used 10000, Requested 1. Please try again in 8.64s. Visit https://***.com/***/*** to learn more. (request id: 2025120601021951327334Gu3kGG0f)', 'type': 'openai_error', 'param': '', 'code': 'rate_limit_exceeded'}}
+2025-12-06 01:02:20 | INFO     | LLM_TRACE | ======== [REQUEST] Model: gpt-4o-mini ========
+2025-12-06 01:02:20 | INFO     | LLM_TRACE | URL: https://api.moleapi.com/v1
+2025-12-06 01:02:20 | INFO     | LLM_TRACE | PROMPT:
+You are an academic search assistant.
+The user will provide a research context.
+
+Your task:
+1. Analyze the context to understand the *current* research goal.
+2. Extract 3 effective, specific academic search queries.
+3. **CRITICAL RULES**:
+   - Keep queries concise (max 3-6 keywords).
+   - Use Keyword-based search (e.g., "Mamba time series forecasting"), NOT natural language sentences.
+   - Remove stop words.
+   - Return the final answer as a JSON object of the form `{ "queries": ["..."] }`. Do **NOT** echo the schema definition or any metadata.
+4. Example Output:
+   {
+     "queries": [
+       "mamba time series forecasting",
+       "state space models weather",
+       "multiscale transformer meteorology"
+     ]
+   }
+
+Output strictly a JSON object matching the schema.
+Target Schema: 
+{
+  "properties": {
+    "queries": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Queries",
+      "type": "array"
+    }
+  },
+  "required": [
+    "queries"
+  ],
+  "title": "SearchQueries",
+  "type": "object"
+}
+
+User Research Context: 
+"""
+I want to use Mamba state space models for time series forecasting on weather data, comparing it with Transformer.
+"""
+
+2025-12-06 01:02:20 | INFO     | LLM_TRACE | --------------------------------------------------
+2025-12-06 01:02:24 | ERROR    | LLM_TRACE | LLM Call Failed: Error code: 429 - {'error': {'message': 'Rate limit reached for gpt-4o-mini in organization org-N8bQVcEvwbsLtGGG9n6QzsKr on requests per day (RPD): Limit 10000, Used 10000, Requested 1. Please try again in 8.64s. Visit https://***.com/***/*** to learn more. (request id: 20251206010222972143815AySoUT0L)', 'type': 'openai_error', 'param': '', 'code': 'rate_limit_exceeded'}}
+2025-12-06 01:02:24 | INFO     | LLM_TRACE | ======== [REQUEST] Model: gpt-4o-mini ========
+2025-12-06 01:02:24 | INFO     | LLM_TRACE | URL: https://api.moleapi.com/v1
+2025-12-06 01:02:24 | INFO     | LLM_TRACE | PROMPT:
+You are an academic search assistant.
+The user will provide a research context.
+
+Your task:
+1. Analyze the context to understand the *current* research goal.
+2. Extract 3 effective, specific academic search queries.
+3. **CRITICAL RULES**:
+   - Keep queries concise (max 3-6 keywords).
+   - Use Keyword-based search (e.g., "Mamba time series forecasting"), NOT natural language sentences.
+   - Remove stop words.
+   - Return the final answer as a JSON object of the form `{ "queries": ["..."] }`. Do **NOT** echo the schema definition or any metadata.
+4. Example Output:
+   {
+     "queries": [
+       "mamba time series forecasting",
+       "state space models weather",
+       "multiscale transformer meteorology"
+     ]
+   }
+
+Output strictly a JSON object matching the schema.
+Target Schema: 
+{
+  "properties": {
+    "queries": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Queries",
+      "type": "array"
+    }
+  },
+  "required": [
+    "queries"
+  ],
+  "title": "SearchQueries",
+  "type": "object"
+}
+
+User Research Context: 
+"""
+I want to use Mamba state space models for time series forecasting on weather data, comparing it with Transformer.
+"""
+
+2025-12-06 01:02:24 | INFO     | LLM_TRACE | --------------------------------------------------
+2025-12-06 01:02:28 | ERROR    | LLM_TRACE | LLM Call Failed: Error code: 429 - {'error': {'message': 'Rate limit reached for gpt-4o-mini in organization org-N8bQVcEvwbsLtGGG9n6QzsKr on requests per day (RPD): Limit 10000, Used 10000, Requested 1. Please try again in 8.64s. Visit https://***.com/***/*** to learn more. (request id: 202512060102272522789761L8iPQhr)', 'type': 'openai_error', 'param': '', 'code': 'rate_limit_exceeded'}}
+2025-12-06 01:02:28 | INFO     | LLM_TRACE | ======== [REQUEST] Model: gpt-4o-mini ========
+2025-12-06 01:02:28 | INFO     | LLM_TRACE | URL: https://api.moleapi.com/v1
+2025-12-06 01:02:28 | INFO     | LLM_TRACE | PROMPT:
+You are an academic search assistant.
+The user will provide a research context.
+
+Your task:
+1. Analyze the context to understand the *current* research goal.
+2. Extract 3 effective, specific academic search queries.
+3. **CRITICAL RULES**:
+   - Keep queries concise (max 3-6 keywords).
+   - Use Keyword-based search (e.g., "Mamba time series forecasting"), NOT natural language sentences.
+   - Remove stop words.
+   - Return the final answer as a JSON object of the form `{ "queries": ["..."] }`. Do **NOT** echo the schema definition or any metadata.
+4. Example Output:
+   {
+     "queries": [
+       "mamba time series forecasting",
+       "state space models weather",
+       "multiscale transformer meteorology"
+     ]
+   }
+
+Output strictly a JSON object matching the schema.
+Target Schema: 
+{
+  "properties": {
+    "queries": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Queries",
+      "type": "array"
+    }
+  },
+  "required": [
+    "queries"
+  ],
+  "title": "SearchQueries",
+  "type": "object"
+}
+
+User Research Context: 
+"""
+I want to use Mamba state space models for time series forecasting on weather data, comparing it with Transformer.
+"""
+
+2025-12-06 01:02:28 | INFO     | LLM_TRACE | --------------------------------------------------
+2025-12-06 01:02:32 | ERROR    | LLM_TRACE | LLM Call Failed: Error code: 429 - {'error': {'message': 'Rate limit reached for gpt-4o-mini in organization org-N8bQVcEvwbsLtGGG9n6QzsKr on requests per day (RPD): Limit 10000, Used 10000, Requested 1. Please try again in 8.64s. Visit https://***.com/***/*** to learn more. (request id: 20251206010230914003704mD2SGEpz)', 'type': 'openai_error', 'param': '', 'code': 'rate_limit_exceeded'}}
+2025-12-06 01:02:32 | INFO     | LLM_TRACE | ======== [REQUEST] Model: gpt-4o-mini ========
+2025-12-06 01:02:32 | INFO     | LLM_TRACE | URL: https://api.moleapi.com/v1
+2025-12-06 01:02:32 | INFO     | LLM_TRACE | PROMPT:
+You are an academic search assistant.
+The user will provide a research context.
+
+Your task:
+1. Analyze the context to understand the *current* research goal.
+2. Extract 3 effective, specific academic search queries.
+3. **CRITICAL RULES**:
+   - Keep queries concise (max 3-6 keywords).
+   - Use Keyword-based search (e.g., "Mamba time series forecasting"), NOT natural language sentences.
+   - Remove stop words.
+   - Return the final answer as a JSON object of the form `{ "queries": ["..."] }`. Do **NOT** echo the schema definition or any metadata.
+4. Example Output:
+   {
+     "queries": [
+       "mamba time series forecasting",
+       "state space models weather",
+       "multiscale transformer meteorology"
+     ]
+   }
+
+Output strictly a JSON object matching the schema.
+Target Schema: 
+{
+  "properties": {
+    "queries": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Queries",
+      "type": "array"
+    }
+  },
+  "required": [
+    "queries"
+  ],
+  "title": "SearchQueries",
+  "type": "object"
+}
+
+User Research Context: 
+"""
+I want to use Mamba state space models for time series forecasting on weather data, comparing it with Transformer.
+"""
+
+2025-12-06 01:02:32 | INFO     | LLM_TRACE | --------------------------------------------------
+2025-12-06 01:02:36 | ERROR    | LLM_TRACE | LLM Call Failed: Error code: 429 - {'error': {'message': 'Rate limit reached for gpt-4o-mini in organization org-N8bQVcEvwbsLtGGG9n6QzsKr on requests per day (RPD): Limit 10000, Used 10000, Requested 1. Please try again in 8.64s. Visit https://***.com/***/*** to learn more. (request id: 20251206010234492915147ITbl2J6S)', 'type': 'openai_error', 'param': '', 'code': 'rate_limit_exceeded'}}
+2025-12-06 01:02:36 | INFO     | LLM_TRACE | ======== [REQUEST] Model: gpt-4o-mini ========
+2025-12-06 01:02:36 | INFO     | LLM_TRACE | URL: https://api.moleapi.com/v1
+2025-12-06 01:02:36 | INFO     | LLM_TRACE | PROMPT:
+You are an academic search assistant.
+The user will provide a research context.
+
+Your task:
+1. Analyze the context to understand the *current* research goal.
+2. Extract 3 effective, specific academic search queries.
+3. **CRITICAL RULES**:
+   - Keep queries concise (max 3-6 keywords).
+   - Use Keyword-based search (e.g., "Mamba time series forecasting"), NOT natural language sentences.
+   - Remove stop words.
+   - Return the final answer as a JSON object of the form `{ "queries": ["..."] }`. Do **NOT** echo the schema definition or any metadata.
+4. Example Output:
+   {
+     "queries": [
+       "mamba time series forecasting",
+       "state space models weather",
+       "multiscale transformer meteorology"
+     ]
+   }
+
+Output strictly a JSON object matching the schema.
+Target Schema: 
+{
+  "properties": {
+    "queries": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Queries",
+      "type": "array"
+    }
+  },
+  "required": [
+    "queries"
+  ],
+  "title": "SearchQueries",
+  "type": "object"
+}
+
+User Research Context: 
+"""
+I want to use Mamba state space models for time series forecasting on weather data, comparing it with Transformer.
+"""
+
+2025-12-06 01:02:36 | INFO     | LLM_TRACE | --------------------------------------------------
+2025-12-06 01:02:38 | ERROR    | LLM_TRACE | LLM Call Failed: Error code: 429 - {'error': {'message': 'Rate limit reached for gpt-4o-mini in organization org-N8bQVcEvwbsLtGGG9n6QzsKr on requests per day (RPD): Limit 10000, Used 10000, Requested 1. Please try again in 8.64s. Visit https://***.com/***/*** to learn more. (request id: 20251206010238132546200DWicS0iP)', 'type': 'openai_error', 'param': '', 'code': 'rate_limit_exceeded'}}
+2025-12-06 01:02:38 | INFO     | LLM_TRACE | ======== [REQUEST] Model: gpt-4o-mini ========
+2025-12-06 01:02:38 | INFO     | LLM_TRACE | URL: https://api.moleapi.com/v1
+2025-12-06 01:02:38 | INFO     | LLM_TRACE | PROMPT:
+You are an academic search assistant.
+The user will provide a research context.
+
+Your task:
+1. Analyze the context to understand the *current* research goal.
+2. Extract 3 effective, specific academic search queries.
+3. **CRITICAL RULES**:
+   - Keep queries concise (max 3-6 keywords).
+   - Use Keyword-based search (e.g., "Mamba time series forecasting"), NOT natural language sentences.
+   - Remove stop words.
+   - Return the final answer as a JSON object of the form `{ "queries": ["..."] }`. Do **NOT** echo the schema definition or any metadata.
+4. Example Output:
+   {
+     "queries": [
+       "mamba time series forecasting",
+       "state space models weather",
+       "multiscale transformer meteorology"
+     ]
+   }
+
+Output strictly a JSON object matching the schema.
+Target Schema: 
+{
+  "properties": {
+    "queries": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Queries",
+      "type": "array"
+    }
+  },
+  "required": [
+    "queries"
+  ],
+  "title": "SearchQueries",
+  "type": "object"
+}
+
+User Research Context: 
+"""
+I want to use Mamba state space models for time series forecasting on weather data, comparing it with Transformer.
+"""
+
+2025-12-06 01:02:38 | INFO     | LLM_TRACE | --------------------------------------------------
+2025-12-06 01:02:43 | ERROR    | LLM_TRACE | LLM Call Failed: Error code: 429 - {'error': {'message': 'Rate limit reached for gpt-4o-mini in organization org-N8bQVcEvwbsLtGGG9n6QzsKr on requests per day (RPD): Limit 10000, Used 10000, Requested 1. Please try again in 8.64s. Visit https://***.com/***/*** to learn more. (request id: 20251206010242138318780vD82zAff)', 'type': 'openai_error', 'param': '', 'code': 'rate_limit_exceeded'}}
+2025-12-06 01:02:43 | INFO     | LLM_TRACE | ======== [REQUEST] Model: gpt-4o-mini ========
+2025-12-06 01:02:43 | INFO     | LLM_TRACE | URL: https://api.moleapi.com/v1
+2025-12-06 01:02:43 | INFO     | LLM_TRACE | PROMPT:
+You are an academic search assistant.
+The user will provide a research context.
+
+Your task:
+1. Analyze the context to understand the *current* research goal.
+2. Extract 3 effective, specific academic search queries.
+3. **CRITICAL RULES**:
+   - Keep queries concise (max 3-6 keywords).
+   - Use Keyword-based search (e.g., "Mamba time series forecasting"), NOT natural language sentences.
+   - Remove stop words.
+   - Return the final answer as a JSON object of the form `{ "queries": ["..."] }`. Do **NOT** echo the schema definition or any metadata.
+4. Example Output:
+   {
+     "queries": [
+       "mamba time series forecasting",
+       "state space models weather",
+       "multiscale transformer meteorology"
+     ]
+   }
+
+Output strictly a JSON object matching the schema.
+Target Schema: 
+{
+  "properties": {
+    "queries": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Queries",
+      "type": "array"
+    }
+  },
+  "required": [
+    "queries"
+  ],
+  "title": "SearchQueries",
+  "type": "object"
+}
+
+User Research Context: 
+"""
+I want to use Mamba state space models for time series forecasting on weather data, comparing it with Transformer.
+"""
+
+2025-12-06 01:02:43 | INFO     | LLM_TRACE | --------------------------------------------------
+2025-12-06 01:02:46 | ERROR    | LLM_TRACE | LLM Call Failed: Error code: 429 - {'error': {'message': 'Rate limit reached for gpt-4o-mini in organization org-N8bQVcEvwbsLtGGG9n6QzsKr on requests per day (RPD): Limit 10000, Used 10000, Requested 1. Please try again in 8.64s. Visit https://***.com/***/*** to learn more. (request id: 20251206010245612988779HXOac4eM)', 'type': 'openai_error', 'param': '', 'code': 'rate_limit_exceeded'}}
+2025-12-06 01:02:46 | INFO     | LLM_TRACE | ======== [REQUEST] Model: gpt-4o-mini ========
+2025-12-06 01:02:46 | INFO     | LLM_TRACE | URL: https://api.moleapi.com/v1
+2025-12-06 01:02:46 | INFO     | LLM_TRACE | PROMPT:
+You are an academic search assistant.
+The user will provide a research context.
+
+Your task:
+1. Analyze the context to understand the *current* research goal.
+2. Extract 3 effective, specific academic search queries.
+3. **CRITICAL RULES**:
+   - Keep queries concise (max 3-6 keywords).
+   - Use Keyword-based search (e.g., "Mamba time series forecasting"), NOT natural language sentences.
+   - Remove stop words.
+   - Return the final answer as a JSON object of the form `{ "queries": ["..."] }`. Do **NOT** echo the schema definition or any metadata.
+4. Example Output:
+   {
+     "queries": [
+       "mamba time series forecasting",
+       "state space models weather",
+       "multiscale transformer meteorology"
+     ]
+   }
+
+Output strictly a JSON object matching the schema.
+Target Schema: 
+{
+  "properties": {
+    "queries": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Queries",
+      "type": "array"
+    }
+  },
+  "required": [
+    "queries"
+  ],
+  "title": "SearchQueries",
+  "type": "object"
+}
+
+User Research Context: 
+"""
+I want to use Mamba state space models for time series forecasting on weather data, comparing it with Transformer.
+"""
+
+2025-12-06 01:02:46 | INFO     | LLM_TRACE | --------------------------------------------------
+2025-12-06 01:12:57 | INFO     | LLM_TRACE | ======== [REQUEST] Model: DeepSeek-V3.2 ========
+2025-12-06 01:12:57 | INFO     | LLM_TRACE | URL: https://llmapi.paratera.com/v1
+2025-12-06 01:12:57 | INFO     | LLM_TRACE | PROMPT HEAD:
+You are an academic search assistant.
+The user will provide a research context.
+
+Your task:
+1. Analyze the context to understand the *current* research goal.
+2. Extract 3 effective, specific academic ...
+2025-12-06 01:12:57 | INFO     | LLM_TRACE | --------------------------------------------------
+2025-12-06 01:12:57 | ERROR    | LLM_TRACE | LLM Call Failed: Error code: 401 - {'error': {'message': "Team not allowed to access model. Team=AI_PRD_SELF-PxcXDTuVk5apBhoZYBGHIo_MuevvMEQ54vVqRkt26Sw, Model=DeepSeek-V3.2. Allowed team models = ['DeepSeek-R1', 'DeepSeek-V3.2-Exp', 'DeepSeek-V3.1-Terminus', 'DeepSeek-V3-250324', 'DeepSeek-R1-0528', 'DeepSeek-V3.1']", 'type': 'team_model_access_denied', 'param': 'model', 'code': '401'}}
+2025-12-06 01:12:57 | INFO     | LLM_TRACE | ======== [REQUEST] Model: DeepSeek-V3.2 ========
+2025-12-06 01:12:57 | INFO     | LLM_TRACE | URL: https://llmapi.paratera.com/v1
+2025-12-06 01:12:57 | INFO     | LLM_TRACE | PROMPT HEAD:
+You are an academic search assistant.
+The user will provide a research context.
+
+Your task:
+1. Analyze the context to understand the *current* research goal.
+2. Extract 3 effective, specific academic ...
+2025-12-06 01:12:57 | INFO     | LLM_TRACE | --------------------------------------------------
+2025-12-06 01:12:57 | ERROR    | LLM_TRACE | LLM Call Failed: Error code: 401 - {'error': {'message': "Team not allowed to access model. Team=AI_PRD_SELF-PxcXDTuVk5apBhoZYBGHIo_MuevvMEQ54vVqRkt26Sw, Model=DeepSeek-V3.2. Allowed team models = ['DeepSeek-R1', 'DeepSeek-V3.2-Exp', 'DeepSeek-V3.1-Terminus', 'DeepSeek-V3-250324', 'DeepSeek-R1-0528', 'DeepSeek-V3.1']", 'type': 'team_model_access_denied', 'param': 'model', 'code': '401'}}
+2025-12-06 01:12:57 | INFO     | LLM_TRACE | ======== [REQUEST] Model: DeepSeek-V3.2 ========
+2025-12-06 01:12:57 | INFO     | LLM_TRACE | URL: https://llmapi.paratera.com/v1
+2025-12-06 01:12:57 | INFO     | LLM_TRACE | PROMPT HEAD:
+You are an academic search assistant.
+The user will provide a research context.
+
+Your task:
+1. Analyze the context to understand the *current* research goal.
+2. Extract 3 effective, specific academic ...
+2025-12-06 01:12:57 | INFO     | LLM_TRACE | --------------------------------------------------
+2025-12-06 01:12:57 | ERROR    | LLM_TRACE | LLM Call Failed: Error code: 401 - {'error': {'message': "Team not allowed to access model. Team=AI_PRD_SELF-PxcXDTuVk5apBhoZYBGHIo_MuevvMEQ54vVqRkt26Sw, Model=DeepSeek-V3.2. Allowed team models = ['DeepSeek-R1', 'DeepSeek-V3.2-Exp', 'DeepSeek-V3.1-Terminus', 'DeepSeek-V3-250324', 'DeepSeek-R1-0528', 'DeepSeek-V3.1']", 'type': 'team_model_access_denied', 'param': 'model', 'code': '401'}}
+2025-12-06 01:12:57 | INFO     | LLM_TRACE | ======== [REQUEST] Model: DeepSeek-V3.2 ========
+2025-12-06 01:12:57 | INFO     | LLM_TRACE | URL: https://llmapi.paratera.com/v1
+2025-12-06 01:12:57 | INFO     | LLM_TRACE | PROMPT HEAD:
+You are an academic search assistant.
+The user will provide a research context.
+
+Your task:
+1. Analyze the context to understand the *current* research goal.
+2. Extract 3 effective, specific academic ...
+2025-12-06 01:12:57 | INFO     | LLM_TRACE | --------------------------------------------------
+2025-12-06 01:12:57 | ERROR    | LLM_TRACE | LLM Call Failed: Error code: 401 - {'error': {'message': "Team not allowed to access model. Team=AI_PRD_SELF-PxcXDTuVk5apBhoZYBGHIo_MuevvMEQ54vVqRkt26Sw, Model=DeepSeek-V3.2. Allowed team models = ['DeepSeek-R1', 'DeepSeek-V3.2-Exp', 'DeepSeek-V3.1-Terminus', 'DeepSeek-V3-250324', 'DeepSeek-R1-0528', 'DeepSeek-V3.1']", 'type': 'team_model_access_denied', 'param': 'model', 'code': '401'}}
+2025-12-06 01:12:57 | INFO     | LLM_TRACE | ======== [REQUEST] Model: DeepSeek-V3.2 ========
+2025-12-06 01:12:57 | INFO     | LLM_TRACE | URL: https://llmapi.paratera.com/v1
+2025-12-06 01:12:57 | INFO     | LLM_TRACE | PROMPT HEAD:
+You are an academic search assistant.
+The user will provide a research context.
+
+Your task:
+1. Analyze the context to understand the *current* research goal.
+2. Extract 3 effective, specific academic ...
+2025-12-06 01:12:57 | INFO     | LLM_TRACE | --------------------------------------------------
+2025-12-06 01:12:57 | ERROR    | LLM_TRACE | LLM Call Failed: Error code: 401 - {'error': {'message': "Team not allowed to access model. Team=AI_PRD_SELF-PxcXDTuVk5apBhoZYBGHIo_MuevvMEQ54vVqRkt26Sw, Model=DeepSeek-V3.2. Allowed team models = ['DeepSeek-R1', 'DeepSeek-V3.2-Exp', 'DeepSeek-V3.1-Terminus', 'DeepSeek-V3-250324', 'DeepSeek-R1-0528', 'DeepSeek-V3.1']", 'type': 'team_model_access_denied', 'param': 'model', 'code': '401'}}
+2025-12-06 01:12:57 | INFO     | LLM_TRACE | ======== [REQUEST] Model: DeepSeek-V3.2 ========
+2025-12-06 01:12:57 | INFO     | LLM_TRACE | URL: https://llmapi.paratera.com/v1
+2025-12-06 01:12:57 | INFO     | LLM_TRACE | PROMPT HEAD:
+You are an academic search assistant.
+The user will provide a research context.
+
+Your task:
+1. Analyze the context to understand the *current* research goal.
+2. Extract 3 effective, specific academic ...
+2025-12-06 01:12:57 | INFO     | LLM_TRACE | --------------------------------------------------
+2025-12-06 01:12:57 | ERROR    | LLM_TRACE | LLM Call Failed: Error code: 401 - {'error': {'message': "Team not allowed to access model. Team=AI_PRD_SELF-PxcXDTuVk5apBhoZYBGHIo_MuevvMEQ54vVqRkt26Sw, Model=DeepSeek-V3.2. Allowed team models = ['DeepSeek-R1', 'DeepSeek-V3.2-Exp', 'DeepSeek-V3.1-Terminus', 'DeepSeek-V3-250324', 'DeepSeek-R1-0528', 'DeepSeek-V3.1']", 'type': 'team_model_access_denied', 'param': 'model', 'code': '401'}}
+2025-12-06 01:12:57 | INFO     | LLM_TRACE | ======== [REQUEST] Model: DeepSeek-V3.2 ========
+2025-12-06 01:12:57 | INFO     | LLM_TRACE | URL: https://llmapi.paratera.com/v1
+2025-12-06 01:12:57 | INFO     | LLM_TRACE | PROMPT HEAD:
+You are an academic search assistant.
+The user will provide a research context.
+
+Your task:
+1. Analyze the context to understand the *current* research goal.
+2. Extract 3 effective, specific academic ...
+2025-12-06 01:12:57 | INFO     | LLM_TRACE | --------------------------------------------------
+2025-12-06 01:12:58 | ERROR    | LLM_TRACE | LLM Call Failed: Error code: 401 - {'error': {'message': "Team not allowed to access model. Team=AI_PRD_SELF-PxcXDTuVk5apBhoZYBGHIo_MuevvMEQ54vVqRkt26Sw, Model=DeepSeek-V3.2. Allowed team models = ['DeepSeek-R1', 'DeepSeek-V3.2-Exp', 'DeepSeek-V3.1-Terminus', 'DeepSeek-V3-250324', 'DeepSeek-R1-0528', 'DeepSeek-V3.1']", 'type': 'team_model_access_denied', 'param': 'model', 'code': '401'}}
+2025-12-06 01:12:58 | INFO     | LLM_TRACE | ======== [REQUEST] Model: DeepSeek-V3.2 ========
+2025-12-06 01:12:58 | INFO     | LLM_TRACE | URL: https://llmapi.paratera.com/v1
+2025-12-06 01:12:58 | INFO     | LLM_TRACE | PROMPT HEAD:
+You are an academic search assistant.
+The user will provide a research context.
+
+Your task:
+1. Analyze the context to understand the *current* research goal.
+2. Extract 3 effective, specific academic ...
+2025-12-06 01:12:58 | INFO     | LLM_TRACE | --------------------------------------------------
+2025-12-06 01:12:58 | ERROR    | LLM_TRACE | LLM Call Failed: Error code: 401 - {'error': {'message': "Team not allowed to access model. Team=AI_PRD_SELF-PxcXDTuVk5apBhoZYBGHIo_MuevvMEQ54vVqRkt26Sw, Model=DeepSeek-V3.2. Allowed team models = ['DeepSeek-R1', 'DeepSeek-V3.2-Exp', 'DeepSeek-V3.1-Terminus', 'DeepSeek-V3-250324', 'DeepSeek-R1-0528', 'DeepSeek-V3.1']", 'type': 'team_model_access_denied', 'param': 'model', 'code': '401'}}
+2025-12-06 01:12:58 | INFO     | LLM_TRACE | ======== [REQUEST] Model: DeepSeek-V3.2 ========
+2025-12-06 01:12:58 | INFO     | LLM_TRACE | URL: https://llmapi.paratera.com/v1
+2025-12-06 01:12:58 | INFO     | LLM_TRACE | PROMPT HEAD:
+You are an academic search assistant.
+The user will provide a research context.
+
+Your task:
+1. Analyze the context to understand the *current* research goal.
+2. Extract 3 effective, specific academic ...
+2025-12-06 01:12:58 | INFO     | LLM_TRACE | --------------------------------------------------
+2025-12-06 01:12:58 | ERROR    | LLM_TRACE | LLM Call Failed: Error code: 401 - {'error': {'message': "Team not allowed to access model. Team=AI_PRD_SELF-PxcXDTuVk5apBhoZYBGHIo_MuevvMEQ54vVqRkt26Sw, Model=DeepSeek-V3.2. Allowed team models = ['DeepSeek-R1', 'DeepSeek-V3.2-Exp', 'DeepSeek-V3.1-Terminus', 'DeepSeek-V3-250324', 'DeepSeek-R1-0528', 'DeepSeek-V3.1']", 'type': 'team_model_access_denied', 'param': 'model', 'code': '401'}}
+2025-12-06 01:12:58 | INFO     | LLM_TRACE | ======== [REQUEST] Model: DeepSeek-V3.2 ========
+2025-12-06 01:12:58 | INFO     | LLM_TRACE | URL: https://llmapi.paratera.com/v1
+2025-12-06 01:12:58 | INFO     | LLM_TRACE | PROMPT HEAD:
+You are an academic search assistant.
+The user will provide a research context.
+
+Your task:
+1. Analyze the context to understand the *current* research goal.
+2. Extract 3 effective, specific academic ...
+2025-12-06 01:12:58 | INFO     | LLM_TRACE | --------------------------------------------------
+2025-12-06 01:12:58 | ERROR    | LLM_TRACE | LLM Call Failed: Error code: 401 - {'error': {'message': "Team not allowed to access model. Team=AI_PRD_SELF-PxcXDTuVk5apBhoZYBGHIo_MuevvMEQ54vVqRkt26Sw, Model=DeepSeek-V3.2. Allowed team models = ['DeepSeek-R1', 'DeepSeek-V3.2-Exp', 'DeepSeek-V3.1-Terminus', 'DeepSeek-V3-250324', 'DeepSeek-R1-0528', 'DeepSeek-V3.1']", 'type': 'team_model_access_denied', 'param': 'model', 'code': '401'}}
+2025-12-06 01:12:58 | INFO     | LLM_TRACE | ======== [REQUEST] Model: DeepSeek-V3.2 ========
+2025-12-06 01:12:58 | INFO     | LLM_TRACE | URL: https://llmapi.paratera.com/v1
+2025-12-06 01:12:58 | INFO     | LLM_TRACE | PROMPT HEAD:
+You are an academic search assistant.
+The user will provide a research context.
+
+Your task:
+1. Analyze the context to understand the *current* research goal.
+2. Extract 3 effective, specific academic ...
+2025-12-06 01:12:58 | INFO     | LLM_TRACE | --------------------------------------------------
+2025-12-06 01:12:58 | ERROR    | LLM_TRACE | LLM Call Failed: Error code: 401 - {'error': {'message': "Team not allowed to access model. Team=AI_PRD_SELF-PxcXDTuVk5apBhoZYBGHIo_MuevvMEQ54vVqRkt26Sw, Model=DeepSeek-V3.2. Allowed team models = ['DeepSeek-R1', 'DeepSeek-V3.2-Exp', 'DeepSeek-V3.1-Terminus', 'DeepSeek-V3-250324', 'DeepSeek-R1-0528', 'DeepSeek-V3.1']", 'type': 'team_model_access_denied', 'param': 'model', 'code': '401'}}
+2025-12-06 01:12:58 | INFO     | LLM_TRACE | ======== [REQUEST] Model: DeepSeek-V3.2 ========
+2025-12-06 01:12:58 | INFO     | LLM_TRACE | URL: https://llmapi.paratera.com/v1
+2025-12-06 01:12:58 | INFO     | LLM_TRACE | PROMPT HEAD:
+You are an academic search assistant.
+The user will provide a research context.
+
+Your task:
+1. Analyze the context to understand the *current* research goal.
+2. Extract 3 effective, specific academic ...
+2025-12-06 01:12:58 | INFO     | LLM_TRACE | --------------------------------------------------
+2025-12-06 01:12:58 | ERROR    | LLM_TRACE | LLM Call Failed: Error code: 401 - {'error': {'message': "Team not allowed to access model. Team=AI_PRD_SELF-PxcXDTuVk5apBhoZYBGHIo_MuevvMEQ54vVqRkt26Sw, Model=DeepSeek-V3.2. Allowed team models = ['DeepSeek-R1', 'DeepSeek-V3.2-Exp', 'DeepSeek-V3.1-Terminus', 'DeepSeek-V3-250324', 'DeepSeek-R1-0528', 'DeepSeek-V3.1']", 'type': 'team_model_access_denied', 'param': 'model', 'code': '401'}}
+2025-12-06 01:12:58 | INFO     | LLM_TRACE | ======== [REQUEST] Model: DeepSeek-V3.2 ========
+2025-12-06 01:12:58 | INFO     | LLM_TRACE | URL: https://llmapi.paratera.com/v1
+2025-12-06 01:12:58 | INFO     | LLM_TRACE | PROMPT HEAD:
+You are an academic search assistant.
+The user will provide a research context.
+
+Your task:
+1. Analyze the context to understand the *current* research goal.
+2. Extract 3 effective, specific academic ...
+2025-12-06 01:12:58 | INFO     | LLM_TRACE | --------------------------------------------------
+2025-12-06 01:12:58 | ERROR    | LLM_TRACE | LLM Call Failed: Error code: 401 - {'error': {'message': "Team not allowed to access model. Team=AI_PRD_SELF-PxcXDTuVk5apBhoZYBGHIo_MuevvMEQ54vVqRkt26Sw, Model=DeepSeek-V3.2. Allowed team models = ['DeepSeek-R1', 'DeepSeek-V3.2-Exp', 'DeepSeek-V3.1-Terminus', 'DeepSeek-V3-250324', 'DeepSeek-R1-0528', 'DeepSeek-V3.1']", 'type': 'team_model_access_denied', 'param': 'model', 'code': '401'}}
+2025-12-06 01:12:58 | INFO     | LLM_TRACE | ======== [REQUEST] Model: DeepSeek-V3.2 ========
+2025-12-06 01:12:58 | INFO     | LLM_TRACE | URL: https://llmapi.paratera.com/v1
+2025-12-06 01:12:58 | INFO     | LLM_TRACE | PROMPT HEAD:
+You are an academic search assistant.
+The user will provide a research context.
+
+Your task:
+1. Analyze the context to understand the *current* research goal.
+2. Extract 3 effective, specific academic ...
+2025-12-06 01:12:58 | INFO     | LLM_TRACE | --------------------------------------------------
+2025-12-06 01:12:58 | ERROR    | LLM_TRACE | LLM Call Failed: Error code: 401 - {'error': {'message': "Team not allowed to access model. Team=AI_PRD_SELF-PxcXDTuVk5apBhoZYBGHIo_MuevvMEQ54vVqRkt26Sw, Model=DeepSeek-V3.2. Allowed team models = ['DeepSeek-R1', 'DeepSeek-V3.2-Exp', 'DeepSeek-V3.1-Terminus', 'DeepSeek-V3-250324', 'DeepSeek-R1-0528', 'DeepSeek-V3.1']", 'type': 'team_model_access_denied', 'param': 'model', 'code': '401'}}
+2025-12-06 01:12:58 | INFO     | LLM_TRACE | ======== [REQUEST] Model: DeepSeek-V3.2 ========
+2025-12-06 01:12:58 | INFO     | LLM_TRACE | URL: https://llmapi.paratera.com/v1
+2025-12-06 01:12:58 | INFO     | LLM_TRACE | PROMPT HEAD:
+You are an academic search assistant.
+The user will provide a research context.
+
+Your task:
+1. Analyze the context to understand the *current* research goal.
+2. Extract 3 effective, specific academic ...
+2025-12-06 01:12:58 | INFO     | LLM_TRACE | --------------------------------------------------
+2025-12-06 01:12:59 | ERROR    | LLM_TRACE | LLM Call Failed: Error code: 401 - {'error': {'message': "Team not allowed to access model. Team=AI_PRD_SELF-PxcXDTuVk5apBhoZYBGHIo_MuevvMEQ54vVqRkt26Sw, Model=DeepSeek-V3.2. Allowed team models = ['DeepSeek-R1', 'DeepSeek-V3.2-Exp', 'DeepSeek-V3.1-Terminus', 'DeepSeek-V3-250324', 'DeepSeek-R1-0528', 'DeepSeek-V3.1']", 'type': 'team_model_access_denied', 'param': 'model', 'code': '401'}}
+2025-12-06 01:12:59 | INFO     | LLM_TRACE | ======== [REQUEST] Model: DeepSeek-V3.2 ========
+2025-12-06 01:12:59 | INFO     | LLM_TRACE | URL: https://llmapi.paratera.com/v1
+2025-12-06 01:12:59 | INFO     | LLM_TRACE | PROMPT HEAD:
+You are an academic search assistant.
+The user will provide a research context.
+
+Your task:
+1. Analyze the context to understand the *current* research goal.
+2. Extract 3 effective, specific academic ...
+2025-12-06 01:12:59 | INFO     | LLM_TRACE | --------------------------------------------------
+2025-12-06 01:12:59 | ERROR    | LLM_TRACE | LLM Call Failed: Error code: 401 - {'error': {'message': "Team not allowed to access model. Team=AI_PRD_SELF-PxcXDTuVk5apBhoZYBGHIo_MuevvMEQ54vVqRkt26Sw, Model=DeepSeek-V3.2. Allowed team models = ['DeepSeek-R1', 'DeepSeek-V3.2-Exp', 'DeepSeek-V3.1-Terminus', 'DeepSeek-V3-250324', 'DeepSeek-R1-0528', 'DeepSeek-V3.1']", 'type': 'team_model_access_denied', 'param': 'model', 'code': '401'}}
+2025-12-06 01:12:59 | INFO     | LLM_TRACE | ======== [REQUEST] Model: DeepSeek-V3.2 ========
+2025-12-06 01:12:59 | INFO     | LLM_TRACE | URL: https://llmapi.paratera.com/v1
+2025-12-06 01:12:59 | INFO     | LLM_TRACE | PROMPT HEAD:
+You are an academic search assistant.
+The user will provide a research context.
+
+Your task:
+1. Analyze the context to understand the *current* research goal.
+2. Extract 3 effective, specific academic ...
+2025-12-06 01:12:59 | INFO     | LLM_TRACE | --------------------------------------------------
+2025-12-06 01:12:59 | ERROR    | LLM_TRACE | LLM Call Failed: Error code: 401 - {'error': {'message': "Team not allowed to access model. Team=AI_PRD_SELF-PxcXDTuVk5apBhoZYBGHIo_MuevvMEQ54vVqRkt26Sw, Model=DeepSeek-V3.2. Allowed team models = ['DeepSeek-R1', 'DeepSeek-V3.2-Exp', 'DeepSeek-V3.1-Terminus', 'DeepSeek-V3-250324', 'DeepSeek-R1-0528', 'DeepSeek-V3.1']", 'type': 'team_model_access_denied', 'param': 'model', 'code': '401'}}
+2025-12-06 01:12:59 | INFO     | LLM_TRACE | ======== [REQUEST] Model: DeepSeek-V3.2 ========
+2025-12-06 01:12:59 | INFO     | LLM_TRACE | URL: https://llmapi.paratera.com/v1
+2025-12-06 01:12:59 | INFO     | LLM_TRACE | PROMPT HEAD:
+You are an academic search assistant.
+The user will provide a research context.
+
+Your task:
+1. Analyze the context to understand the *current* research goal.
+2. Extract 3 effective, specific academic ...
+2025-12-06 01:12:59 | INFO     | LLM_TRACE | --------------------------------------------------
+2025-12-06 01:12:59 | ERROR    | LLM_TRACE | LLM Call Failed: Error code: 401 - {'error': {'message': "Team not allowed to access model. Team=AI_PRD_SELF-PxcXDTuVk5apBhoZYBGHIo_MuevvMEQ54vVqRkt26Sw, Model=DeepSeek-V3.2. Allowed team models = ['DeepSeek-R1', 'DeepSeek-V3.2-Exp', 'DeepSeek-V3.1-Terminus', 'DeepSeek-V3-250324', 'DeepSeek-R1-0528', 'DeepSeek-V3.1']", 'type': 'team_model_access_denied', 'param': 'model', 'code': '401'}}
+2025-12-06 01:14:21 | INFO     | LLM_TRACE | ======== [REQUEST] Model: DeepSeek-V3.2-Exp ========
+2025-12-06 01:14:21 | INFO     | LLM_TRACE | URL: https://llmapi.paratera.com/v1
+2025-12-06 01:14:21 | INFO     | LLM_TRACE | PROMPT HEAD:
+You are an academic search assistant.
+The user will provide a research context.
+
+Your task:
+1. Analyze the context to understand the *current* research goal.
+2. Extract 3 effective, specific academic ...
+2025-12-06 01:14:21 | INFO     | LLM_TRACE | --------------------------------------------------
+2025-12-06 01:14:23 | INFO     | LLM_TRACE | ======== [RESPONSE] ========
+2025-12-06 01:14:23 | INFO     | LLM_TRACE | CONTENT HEAD:
+{
+  "queries": [
+    "mamba state space time series",
+    "mamba transformer forecasting comparison",
+    "weather data time series forecasting"
+  ]
+}...
+2025-12-06 01:14:23 | INFO     | LLM_TRACE | ============================================================
+
+2025-12-06 01:14:36 | INFO     | LLM_TRACE | ======== [REQUEST] Model: DeepSeek-V3.2-Exp ========
+2025-12-06 01:14:36 | INFO     | LLM_TRACE | URL: https://llmapi.paratera.com/v1
+2025-12-06 01:14:36 | INFO     | LLM_TRACE | PROMPT HEAD:
+You are a Critical Reviewer for a top-tier CS conference (e.g., CVPR, NeurIPS, CCS).
+
+User Idea: "I want to use Mamba state space models for time series forecasting on weather data, comparing it with ...
+2025-12-06 01:14:36 | INFO     | LLM_TRACE | --------------------------------------------------
+2025-12-06 01:15:10 | INFO     | LLM_TRACE | ======== [RESPONSE] ========
+2025-12-06 01:15:10 | INFO     | LLM_TRACE | CONTENT HEAD:
+{
+  "refined_idea": "This research proposes a novel multivariate time series forecasting architecture that leverages Mamba's selective state space models to address the computational inefficiency of T...
+2025-12-06 01:15:10 | INFO     | LLM_TRACE | ============================================================
+
+2025-12-06 01:15:10 | INFO     | LLM_TRACE | ======== [REQUEST] Model: DeepSeek-V3.2-Exp ========
+2025-12-06 01:15:10 | INFO     | LLM_TRACE | URL: https://llmapi.paratera.com/v1
+2025-12-06 01:15:10 | INFO     | LLM_TRACE | PROMPT HEAD:
+You are an academic search assistant.
+The user will provide a research context.
+
+Your task:
+1. Analyze the context to understand the *current* research goal.
+2. Extract 3 effective, specific academic ...
+2025-12-06 01:15:10 | INFO     | LLM_TRACE | --------------------------------------------------
+2025-12-06 01:15:13 | INFO     | LLM_TRACE | ======== [RESPONSE] ========
+2025-12-06 01:15:13 | INFO     | LLM_TRACE | CONTENT HEAD:
+{
+  "queries": [
+    "mamba multivariate time series forecasting",
+    "state space models weather data",
+    "multiscale temporal dynamics forecasting"
+  ]
+}...
+2025-12-06 01:15:13 | INFO     | LLM_TRACE | ============================================================
+
+2025-12-06 01:15:30 | INFO     | LLM_TRACE | ======== [REQUEST] Model: DeepSeek-V3.2-Exp ========
+2025-12-06 01:15:30 | INFO     | LLM_TRACE | URL: https://llmapi.paratera.com/v1
+2025-12-06 01:15:30 | INFO     | LLM_TRACE | PROMPT HEAD:
+You are a Critical Reviewer for a top-tier CS conference (e.g., CVPR, NeurIPS, CCS).
+
+User Idea: "This research proposes a novel multivariate time series forecasting architecture that leverages Mamba'...
+2025-12-06 01:15:30 | INFO     | LLM_TRACE | --------------------------------------------------
+2025-12-06 01:16:09 | INFO     | LLM_TRACE | ======== [RESPONSE] ========
+2025-12-06 01:16:09 | INFO     | LLM_TRACE | CONTENT HEAD:
+{
+  "refined_idea": "This research introduces a novel multivariate time series forecasting architecture that integrates Mamba's selective state space models with specialized mechanisms for non-station...
+2025-12-06 01:16:09 | INFO     | LLM_TRACE | ============================================================
+
+2025-12-06 01:16:09 | INFO     | LLM_TRACE | ======== [REQUEST] Model: DeepSeek-V3.2-Exp ========
+2025-12-06 01:16:09 | INFO     | LLM_TRACE | URL: https://llmapi.paratera.com/v1
+2025-12-06 01:16:09 | INFO     | LLM_TRACE | PROMPT HEAD:
+You are the infamous **"Reviewer #2"** for a top-tier CS conference (e.g., CVPR, NeurIPS, S&P).
+You are skeptical, critical, and hard to please. You assume the submission is flawed until proven otherw...
+2025-12-06 01:16:09 | INFO     | LLM_TRACE | --------------------------------------------------
+2025-12-06 01:16:26 | INFO     | LLM_TRACE | ======== [RESPONSE] ========
+2025-12-06 01:16:26 | INFO     | LLM_TRACE | CONTENT HEAD:
+{
+  "decision": "REVISE",
+  "score": 6,
+  "critique": "The proposal demonstrates good intuition by identifying genuine limitations in existing Mamba and hybrid architectures for non-stationary weather...
+2025-12-06 01:16:26 | INFO     | LLM_TRACE | ============================================================
+
+2025-12-06 01:16:26 | INFO     | LLM_TRACE | ======== [REQUEST] Model: DeepSeek-V3.2-Exp ========
+2025-12-06 01:16:26 | INFO     | LLM_TRACE | URL: https://llmapi.paratera.com/v1
+2025-12-06 01:16:26 | INFO     | LLM_TRACE | PROMPT HEAD:
+You are an academic search assistant.
+The user will provide a research context.
+
+Your task:
+1. Analyze the context to understand the *current* research goal.
+2. Extract 3 effective, specific academic ...
+2025-12-06 01:16:26 | INFO     | LLM_TRACE | --------------------------------------------------
+2025-12-06 01:16:28 | INFO     | LLM_TRACE | ======== [RESPONSE] ========
+2025-12-06 01:16:28 | INFO     | LLM_TRACE | CONTENT HEAD:
+{
+  "queries": [
+    "mamba time series forecasting",
+    "multivariate time series non-stationary",
+    "multi-scale decomposition weather forecasting"
+  ]
+}...
+2025-12-06 01:16:28 | INFO     | LLM_TRACE | ============================================================
+
+2025-12-06 01:16:40 | INFO     | LLM_TRACE | ======== [REQUEST] Model: DeepSeek-V3.2-Exp ========
+2025-12-06 01:16:40 | INFO     | LLM_TRACE | URL: https://llmapi.paratera.com/v1
+2025-12-06 01:16:40 | INFO     | LLM_TRACE | PROMPT HEAD:
+You are a Critical Reviewer for a top-tier CS conference (e.g., CVPR, NeurIPS, CCS).
+
+User Idea: "This research introduces a novel multivariate time series forecasting architecture that integrates Mam...
+2025-12-06 01:16:40 | INFO     | LLM_TRACE | --------------------------------------------------
+2025-12-06 01:17:23 | INFO     | LLM_TRACE | ======== [RESPONSE] ========
+2025-12-06 01:17:23 | INFO     | LLM_TRACE | CONTENT HEAD:
+```json
+{
+  "refined_idea": "This research introduces a non-stationary selective state space architecture for multivariate time series forecasting that fundamentally addresses the linear time-invarian...
+2025-12-06 01:17:23 | INFO     | LLM_TRACE | ============================================================
+
+2025-12-06 01:17:23 | INFO     | LLM_TRACE | ======== [REQUEST] Model: DeepSeek-V3.2-Exp ========
+2025-12-06 01:17:23 | INFO     | LLM_TRACE | URL: https://llmapi.paratera.com/v1
+2025-12-06 01:17:23 | INFO     | LLM_TRACE | PROMPT HEAD:
+You are an academic search assistant.
+The user will provide a research context.
+
+Your task:
+1. Analyze the context to understand the *current* research goal.
+2. Extract 3 effective, specific academic ...
+2025-12-06 01:17:23 | INFO     | LLM_TRACE | --------------------------------------------------
+2025-12-06 01:17:25 | INFO     | LLM_TRACE | ======== [RESPONSE] ========
+2025-12-06 01:17:25 | INFO     | LLM_TRACE | CONTENT HEAD:
+{
+  "queries": [
+    "non-stationary state space forecasting",
+    "learnable temporal routing Mamba",
+    "time-varying state transition parameters"
+  ]
+}...
+2025-12-06 01:17:25 | INFO     | LLM_TRACE | ============================================================
+
+2025-12-06 01:17:38 | INFO     | LLM_TRACE | ======== [REQUEST] Model: DeepSeek-V3.2-Exp ========
+2025-12-06 01:17:38 | INFO     | LLM_TRACE | URL: https://llmapi.paratera.com/v1
+2025-12-06 01:17:38 | INFO     | LLM_TRACE | PROMPT HEAD:
+You are a Critical Reviewer for a top-tier CS conference (e.g., CVPR, NeurIPS, CCS).
+
+User Idea: "This research introduces a non-stationary selective state space architecture for multivariate time ser...
+2025-12-06 01:17:38 | INFO     | LLM_TRACE | --------------------------------------------------
+2025-12-06 01:18:20 | INFO     | LLM_TRACE | ======== [RESPONSE] ========
+2025-12-06 01:18:20 | INFO     | LLM_TRACE | CONTENT HEAD:
+```json
+{
+  "refined_idea": "This research proposes a non-stationary selective state space architecture for multivariate time series forecasting that fundamentally addresses the linear time-invariant ...
+2025-12-06 01:18:20 | INFO     | LLM_TRACE | ============================================================
+
+2025-12-06 01:18:20 | INFO     | LLM_TRACE | ======== [REQUEST] Model: DeepSeek-V3.2-Exp ========
+2025-12-06 01:18:20 | INFO     | LLM_TRACE | URL: https://llmapi.paratera.com/v1
+2025-12-06 01:18:20 | INFO     | LLM_TRACE | PROMPT HEAD:
+You are the infamous **"Reviewer #2"** for a top-tier CS conference (e.g., CVPR, NeurIPS, S&P).
+You are skeptical, critical, and hard to please. You assume the submission is flawed until proven otherw...
+2025-12-06 01:18:20 | INFO     | LLM_TRACE | --------------------------------------------------
+2025-12-06 01:18:30 | INFO     | LLM_TRACE | ======== [RESPONSE] ========
+2025-12-06 01:18:30 | INFO     | LLM_TRACE | CONTENT HEAD:
+{
+  "decision": "REVISE",
+  "score": 5,
+  "critique": "The proposal identifies a legitimate limitation in Mamba's LTI assumption but fails to provide sufficient theoretical depth. While the gap analys...
+2025-12-06 01:18:30 | INFO     | LLM_TRACE | ============================================================
+
+2025-12-06 01:18:30 | INFO     | LLM_TRACE | ======== [REQUEST] Model: DeepSeek-V3.2-Exp ========
+2025-12-06 01:18:30 | INFO     | LLM_TRACE | URL: https://llmapi.paratera.com/v1
+2025-12-06 01:18:30 | INFO     | LLM_TRACE | PROMPT HEAD:
+You are an academic search assistant.
+The user will provide a research context.
+
+Your task:
+1. Analyze the context to understand the *current* research goal.
+2. Extract 3 effective, specific academic ...
+2025-12-06 01:18:30 | INFO     | LLM_TRACE | --------------------------------------------------
+2025-12-06 01:18:32 | INFO     | LLM_TRACE | ======== [RESPONSE] ========
+2025-12-06 01:18:32 | INFO     | LLM_TRACE | CONTENT HEAD:
+{
+  "queries": [
+    "non-stationary state space forecasting",
+    "learnable temporal routing Mamba",
+    "time-varying state transition parameters"
+  ]
+}...
+2025-12-06 01:18:32 | INFO     | LLM_TRACE | ============================================================
+
+2025-12-06 01:18:46 | INFO     | LLM_TRACE | ======== [REQUEST] Model: DeepSeek-V3.2-Exp ========
+2025-12-06 01:18:46 | INFO     | LLM_TRACE | URL: https://llmapi.paratera.com/v1
+2025-12-06 01:18:46 | INFO     | LLM_TRACE | PROMPT HEAD:
+You are a Critical Reviewer for a top-tier CS conference (e.g., CVPR, NeurIPS, CCS).
+
+User Idea: "This research proposes a non-stationary selective state space architecture for multivariate time serie...
+2025-12-06 01:18:46 | INFO     | LLM_TRACE | --------------------------------------------------
+2025-12-06 01:19:25 | INFO     | LLM_TRACE | ======== [RESPONSE] ========
+2025-12-06 01:19:25 | INFO     | LLM_TRACE | CONTENT HEAD:
+```json
+{
+  "refined_idea": "This research introduces a non-stationary selective state space architecture that fundamentally addresses the linear time-invariant (LTI) constraint in Mamba models throug...
+2025-12-06 01:19:25 | INFO     | LLM_TRACE | ============================================================
+
+2025-12-06 01:19:25 | INFO     | LLM_TRACE | ======== [REQUEST] Model: DeepSeek-V3.2-Exp ========
+2025-12-06 01:19:25 | INFO     | LLM_TRACE | URL: https://llmapi.paratera.com/v1
+2025-12-06 01:19:25 | INFO     | LLM_TRACE | PROMPT HEAD:
+You are an academic search assistant.
+The user will provide a research context.
+
+Your task:
+1. Analyze the context to understand the *current* research goal.
+2. Extract 3 effective, specific academic ...
+2025-12-06 01:19:25 | INFO     | LLM_TRACE | --------------------------------------------------
+2025-12-06 01:19:27 | INFO     | LLM_TRACE | ======== [RESPONSE] ========
+2025-12-06 01:19:27 | INFO     | LLM_TRACE | CONTENT HEAD:
+{
+  "queries": [
+    "non-stationary state space models",
+    "time varying parameterization Mamba",
+    "wavelet decomposition state space"
+  ]
+}...
+2025-12-06 01:19:27 | INFO     | LLM_TRACE | ============================================================
+
+2025-12-06 01:19:40 | INFO     | LLM_TRACE | ======== [REQUEST] Model: DeepSeek-V3.2-Exp ========
+2025-12-06 01:19:40 | INFO     | LLM_TRACE | URL: https://llmapi.paratera.com/v1
+2025-12-06 01:19:40 | INFO     | LLM_TRACE | PROMPT HEAD:
+You are a Critical Reviewer for a top-tier CS conference (e.g., CVPR, NeurIPS, CCS).
+
+User Idea: "This research introduces a non-stationary selective state space architecture that fundamentally addres...
+2025-12-06 01:19:40 | INFO     | LLM_TRACE | --------------------------------------------------
+2025-12-06 01:20:22 | INFO     | LLM_TRACE | ======== [RESPONSE] ========
+2025-12-06 01:20:22 | INFO     | LLM_TRACE | CONTENT HEAD:
+```json
+{
+  "refined_idea": "This research introduces a non-stationary selective state space architecture that overcomes the linear time-invariant (LTI) constraint in Mamba models through time-varying...
+2025-12-06 01:20:22 | INFO     | LLM_TRACE | ============================================================
+
+2025-12-06 01:20:22 | INFO     | LLM_TRACE | ======== [REQUEST] Model: DeepSeek-V3.2-Exp ========
+2025-12-06 01:20:22 | INFO     | LLM_TRACE | URL: https://llmapi.paratera.com/v1
+2025-12-06 01:20:22 | INFO     | LLM_TRACE | PROMPT HEAD:
+You are the infamous **"Reviewer #2"** for a top-tier CS conference (e.g., CVPR, NeurIPS, S&P).
+You are skeptical, critical, and hard to please. You assume the submission is flawed until proven otherw...
+2025-12-06 01:20:22 | INFO     | LLM_TRACE | --------------------------------------------------
+2025-12-06 01:20:33 | INFO     | LLM_TRACE | ======== [RESPONSE] ========
+2025-12-06 01:20:33 | INFO     | LLM_TRACE | CONTENT HEAD:
+{
+  "decision": "REVISE",
+  "score": 5,
+  "critique": "The proposal identifies a legitimate limitation in Mamba's LTI assumption but fails to provide sufficient theoretical depth. The gap analysis is ...
+2025-12-06 01:20:33 | INFO     | LLM_TRACE | ============================================================
+
+2025-12-06 01:23:45 | INFO     | LLM_TRACE | ======== [REQUEST] Model: DeepSeek-V3.2-Exp ========
+2025-12-06 01:23:45 | INFO     | LLM_TRACE | URL: https://llmapi.paratera.com/v1
+2025-12-06 01:23:45 | INFO     | LLM_TRACE | PROMPT HEAD:
+You are a Distinguished Computer Science Professor.
+Your goal is to develop a **NOVEL** theoretical framework based on the user's idea.
+
+**CRITICAL WARNING - ANTI-PLAGIARISM**:
+- The "Related Work" pr...
+2025-12-06 01:23:45 | INFO     | LLM_TRACE | --------------------------------------------------
+2025-12-06 01:24:14 | INFO     | LLM_TRACE | ======== [RESPONSE] ========
+2025-12-06 01:24:14 | INFO     | LLM_TRACE | CONTENT HEAD:
+```json
+{
+  "research_field": "Time Series Forecasting with Non-Stationary State Space Models",
+  "problem_formulation": "Given an input multivariate time series $\\mathbf{X} \\in \\mathbb{R}^{L \\tim...
+2025-12-06 01:24:14 | INFO     | LLM_TRACE | ============================================================
+
+2025-12-06 01:24:14 | INFO     | LLM_TRACE | ======== [REQUEST] Model: DeepSeek-V3.2-Exp ========
+2025-12-06 01:24:14 | INFO     | LLM_TRACE | URL: https://llmapi.paratera.com/v1
+2025-12-06 01:24:14 | INFO     | LLM_TRACE | PROMPT HEAD:
+You are a Distinguished Computer Science Professor.
+Your goal is to develop a **NOVEL** theoretical framework based on the user's idea.
+
+**CRITICAL WARNING - ANTI-PLAGIARISM**:
+- The "Related Work" pr...
+2025-12-06 01:24:14 | INFO     | LLM_TRACE | --------------------------------------------------
+2025-12-06 01:24:14 | INFO     | LLM_TRACE | ======== [RESPONSE] ========
+2025-12-06 01:24:14 | INFO     | LLM_TRACE | CONTENT HEAD:
+```json
+{
+  "research_field": "Time Series Forecasting with Non-Stationary State Space Models",
+  "problem_formulation": "Given an input multivariate time series $\\mathbf{X} \\in \\mathbb{R}^{L \\tim...
+2025-12-06 01:24:14 | INFO     | LLM_TRACE | ============================================================
+
+2025-12-06 01:24:14 | INFO     | LLM_TRACE | ======== [REQUEST] Model: DeepSeek-V3.2-Exp ========
+2025-12-06 01:24:14 | INFO     | LLM_TRACE | URL: https://llmapi.paratera.com/v1
+2025-12-06 01:24:14 | INFO     | LLM_TRACE | PROMPT HEAD:
+You are the infamous **"Reviewer #2"** for a top-tier CS conference (e.g., CVPR, NeurIPS, S&P).
+You are skeptical, critical, and hard to please. You assume the submission is flawed until proven otherw...
+2025-12-06 01:24:14 | INFO     | LLM_TRACE | --------------------------------------------------
+2025-12-06 01:24:26 | INFO     | LLM_TRACE | ======== [RESPONSE] ========
+2025-12-06 01:24:26 | INFO     | LLM_TRACE | CONTENT HEAD:
+{
+  "decision": "REVISE",
+  "score": 5,
+  "critique": "The theoretical framework presents an interesting intuition but suffers from severe mathematical incompleteness and unsubstantiated claims. The '...
+2025-12-06 01:24:26 | INFO     | LLM_TRACE | ============================================================
+
+2025-12-06 01:24:26 | INFO     | LLM_TRACE | ======== [REQUEST] Model: DeepSeek-V3.2-Exp ========
+2025-12-06 01:24:26 | INFO     | LLM_TRACE | URL: https://llmapi.paratera.com/v1
+2025-12-06 01:24:26 | INFO     | LLM_TRACE | PROMPT HEAD:
+You are a Distinguished Computer Science Professor.
+Your goal is to develop a **NOVEL** theoretical framework based on the user's idea.
+
+**CRITICAL WARNING - ANTI-PLAGIARISM**:
+- The "Related Work" pr...
+2025-12-06 01:24:26 | INFO     | LLM_TRACE | --------------------------------------------------
+2025-12-06 01:24:27 | INFO     | LLM_TRACE | ======== [RESPONSE] ========
+2025-12-06 01:24:27 | INFO     | LLM_TRACE | CONTENT HEAD:
+```json
+{
+  "research_field": "Time Series Forecasting with Non-Stationary State Space Models",
+  "problem_formulation": "Given an input multivariate time series $\\mathbf{X} \\in \\mathbb{R}^{L \\tim...
+2025-12-06 01:24:27 | INFO     | LLM_TRACE | ============================================================
+
+2025-12-06 01:24:27 | INFO     | LLM_TRACE | ======== [REQUEST] Model: DeepSeek-V3.2-Exp ========
+2025-12-06 01:24:27 | INFO     | LLM_TRACE | URL: https://llmapi.paratera.com/v1
+2025-12-06 01:24:27 | INFO     | LLM_TRACE | PROMPT HEAD:
+You are a Distinguished Computer Science Professor.
+Your goal is to develop a **NOVEL** theoretical framework based on the user's idea.
+
+**CRITICAL WARNING - ANTI-PLAGIARISM**:
+- The "Related Work" pr...
+2025-12-06 01:24:27 | INFO     | LLM_TRACE | --------------------------------------------------
+2025-12-06 01:24:27 | INFO     | LLM_TRACE | ======== [RESPONSE] ========
+2025-12-06 01:24:27 | INFO     | LLM_TRACE | CONTENT HEAD:
+```json
+{
+  "research_field": "Time Series Forecasting with Non-Stationary State Space Models",
+  "problem_formulation": "Given an input multivariate time series $\\mathbf{X} \\in \\mathbb{R}^{L \\tim...
+2025-12-06 01:24:27 | INFO     | LLM_TRACE | ============================================================
+
+2025-12-06 01:24:27 | INFO     | LLM_TRACE | ======== [REQUEST] Model: DeepSeek-V3.2-Exp ========
+2025-12-06 01:24:27 | INFO     | LLM_TRACE | URL: https://llmapi.paratera.com/v1
+2025-12-06 01:24:27 | INFO     | LLM_TRACE | PROMPT HEAD:
+You are the infamous **"Reviewer #2"** for a top-tier CS conference (e.g., CVPR, NeurIPS, S&P).
+You are skeptical, critical, and hard to please. You assume the submission is flawed until proven otherw...
+2025-12-06 01:24:27 | INFO     | LLM_TRACE | --------------------------------------------------
+2025-12-06 01:24:38 | INFO     | LLM_TRACE | ======== [RESPONSE] ========
+2025-12-06 01:24:38 | INFO     | LLM_TRACE | CONTENT HEAD:
+{
+  "decision": "REVISE",
+  "score": 6,
+  "critique": "The theoretical framework presents interesting ideas but suffers from critical flaws. While the methodology includes mathematical notation, the t...
+2025-12-06 01:24:38 | INFO     | LLM_TRACE | ============================================================
+
+2025-12-06 01:24:38 | INFO     | LLM_TRACE | ======== [REQUEST] Model: DeepSeek-V3.2-Exp ========
+2025-12-06 01:24:38 | INFO     | LLM_TRACE | URL: https://llmapi.paratera.com/v1
+2025-12-06 01:24:38 | INFO     | LLM_TRACE | PROMPT HEAD:
+You are a Distinguished Computer Science Professor.
+Your goal is to develop a **NOVEL** theoretical framework based on the user's idea.
+
+**CRITICAL WARNING - ANTI-PLAGIARISM**:
+- The "Related Work" pr...
+2025-12-06 01:24:38 | INFO     | LLM_TRACE | --------------------------------------------------
+2025-12-06 01:24:38 | INFO     | LLM_TRACE | ======== [RESPONSE] ========
+2025-12-06 01:24:38 | INFO     | LLM_TRACE | CONTENT HEAD:
+```json
+{
+  "research_field": "Time Series Forecasting with Non-Stationary State Space Models",
+  "problem_formulation": "Given an input multivariate time series $\\mathbf{X} \\in \\mathbb{R}^{L \\tim...
+2025-12-06 01:24:38 | INFO     | LLM_TRACE | ============================================================
+
+2025-12-06 01:24:38 | INFO     | LLM_TRACE | ======== [REQUEST] Model: DeepSeek-V3.2-Exp ========
+2025-12-06 01:24:38 | INFO     | LLM_TRACE | URL: https://llmapi.paratera.com/v1
+2025-12-06 01:24:38 | INFO     | LLM_TRACE | PROMPT HEAD:
+You are a Distinguished Computer Science Professor.
+Your goal is to develop a **NOVEL** theoretical framework based on the user's idea.
+
+**CRITICAL WARNING - ANTI-PLAGIARISM**:
+- The "Related Work" pr...
+2025-12-06 01:24:38 | INFO     | LLM_TRACE | --------------------------------------------------
+2025-12-06 01:24:38 | INFO     | LLM_TRACE | ======== [RESPONSE] ========
+2025-12-06 01:24:38 | INFO     | LLM_TRACE | CONTENT HEAD:
+```json
+{
+  "research_field": "Time Series Forecasting with Non-Stationary State Space Models",
+  "problem_formulation": "Given an input multivariate time series $\\mathbf{X} \\in \\mathbb{R}^{L \\tim...
+2025-12-06 01:24:38 | INFO     | LLM_TRACE | ============================================================
+
+2025-12-06 01:24:38 | INFO     | LLM_TRACE | ======== [REQUEST] Model: DeepSeek-V3.2-Exp ========
+2025-12-06 01:24:38 | INFO     | LLM_TRACE | URL: https://llmapi.paratera.com/v1
+2025-12-06 01:24:38 | INFO     | LLM_TRACE | PROMPT HEAD:
+You are the infamous **"Reviewer #2"** for a top-tier CS conference (e.g., CVPR, NeurIPS, S&P).
+You are skeptical, critical, and hard to please. You assume the submission is flawed until proven otherw...
+2025-12-06 01:24:38 | INFO     | LLM_TRACE | --------------------------------------------------
+2025-12-06 01:24:38 | INFO     | LLM_TRACE | ======== [RESPONSE] ========
+2025-12-06 01:24:38 | INFO     | LLM_TRACE | CONTENT HEAD:
+{
+  "decision": "REVISE",
+  "score": 6,
+  "critique": "The theoretical framework presents interesting ideas but suffers from critical flaws. While the methodology includes mathematical notation, the t...
+2025-12-06 01:24:38 | INFO     | LLM_TRACE | ============================================================
+
+2025-12-06 01:24:38 | INFO     | LLM_TRACE | ======== [REQUEST] Model: DeepSeek-V3.2-Exp ========
+2025-12-06 01:24:38 | INFO     | LLM_TRACE | URL: https://llmapi.paratera.com/v1
+2025-12-06 01:24:38 | INFO     | LLM_TRACE | PROMPT HEAD:
+You are a Principal Software Architect. 
+Your goal is to produce a **Low-Level Engineering Specification** ready for implementation.
+
+**THE GOLDEN RULE**: 
+- Do NOT write English descriptions like "In...
+2025-12-06 01:24:38 | INFO     | LLM_TRACE | --------------------------------------------------
+2025-12-06 01:27:49 | INFO     | LLM_TRACE | ======== [RESPONSE] ========
+2025-12-06 01:27:49 | INFO     | LLM_TRACE | CONTENT HEAD:
+```json
+{
+  "project_name": "Spectral Adaptive Mamba (SAMba)",
+  "architecture_style": "Non-Stationary State Space Models with Adaptive Parameterization",
+  "requirements": [
+    "torch>=2.0.0",
+    "...
+2025-12-06 01:27:49 | INFO     | LLM_TRACE | ============================================================
+
+2025-12-06 01:27:49 | INFO     | LLM_TRACE | ======== [REQUEST] Model: DeepSeek-V3.2-Exp ========
+2025-12-06 01:27:49 | INFO     | LLM_TRACE | URL: https://llmapi.paratera.com/v1
+2025-12-06 01:27:49 | INFO     | LLM_TRACE | PROMPT HEAD:
+You are the infamous **"Reviewer #2"** for a top-tier CS conference (e.g., CVPR, NeurIPS, S&P).
+You are skeptical, critical, and hard to please. You assume the submission is flawed until proven otherw...
+2025-12-06 01:27:49 | INFO     | LLM_TRACE | --------------------------------------------------
+2025-12-06 01:28:01 | INFO     | LLM_TRACE | ======== [RESPONSE] ========
+2025-12-06 01:28:01 | INFO     | LLM_TRACE | CONTENT HEAD:
+{
+  "decision": "REVISE",
+  "score": 5,
+  "critique": "The system architecture shows good modularity with proper separation of concerns (config, models, data, training), but suffers from critical flaw...
+2025-12-06 01:28:01 | INFO     | LLM_TRACE | ============================================================
+
+2025-12-06 01:28:01 | INFO     | LLM_TRACE | ======== [REQUEST] Model: DeepSeek-V3.2-Exp ========
+2025-12-06 01:28:01 | INFO     | LLM_TRACE | URL: https://llmapi.paratera.com/v1
+2025-12-06 01:28:01 | INFO     | LLM_TRACE | PROMPT HEAD:
+You are a Principal Software Architect. 
+Your goal is to produce a **Low-Level Engineering Specification** ready for implementation.
+
+**THE GOLDEN RULE**: 
+- Do NOT write English descriptions like "In...
+2025-12-06 01:28:01 | INFO     | LLM_TRACE | --------------------------------------------------
+2025-12-06 01:30:44 | INFO     | LLM_TRACE | ======== [RESPONSE] ========
+2025-12-06 01:30:44 | INFO     | LLM_TRACE | CONTENT HEAD:
+```json
+{
+  "project_name": "Spectral Adaptive Mamba (SAMba)",
+  "architecture_style": "Non-Stationary State Space Model with Adaptive Parameterization",
+  "requirements": [
+    "torch>=2.0.0",
+    "n...
+2025-12-06 01:30:44 | INFO     | LLM_TRACE | ============================================================
+
+2025-12-06 01:30:44 | INFO     | LLM_TRACE | ======== [REQUEST] Model: DeepSeek-V3.2-Exp ========
+2025-12-06 01:30:44 | INFO     | LLM_TRACE | URL: https://llmapi.paratera.com/v1
+2025-12-06 01:30:44 | INFO     | LLM_TRACE | PROMPT HEAD:
+You are the infamous **"Reviewer #2"** for a top-tier CS conference (e.g., CVPR, NeurIPS, S&P).
+You are skeptical, critical, and hard to please. You assume the submission is flawed until proven otherw...
+2025-12-06 01:30:44 | INFO     | LLM_TRACE | --------------------------------------------------
+2025-12-06 01:30:55 | INFO     | LLM_TRACE | ======== [RESPONSE] ========
+2025-12-06 01:30:55 | INFO     | LLM_TRACE | CONTENT HEAD:
+{
+  "decision": "REVISE",
+  "score": 5,
+  "critique": "The system architecture shows good modularity with proper separation of concerns (models, data, training), but has critical flaws. The config sys...
+2025-12-06 01:30:55 | INFO     | LLM_TRACE | ============================================================
+
+2025-12-06 01:37:46 | INFO     | LLM_TRACE | ======== [REQUEST] Model: DeepSeek-V3.2-Exp ========
+2025-12-06 01:37:46 | INFO     | LLM_TRACE | URL: https://llmapi.paratera.com/v1
+2025-12-06 01:37:46 | INFO     | LLM_TRACE | PROMPT HEAD:
+You are an academic search assistant.
+The user will provide a research context.
+
+Your task:
+1. Analyze the context to understand the *current* research goal.
+2. Extract 3 effective, specific academic ...
+2025-12-06 01:37:46 | INFO     | LLM_TRACE | --------------------------------------------------
+2025-12-06 01:37:50 | INFO     | LLM_TRACE | ======== [RESPONSE] ========
+2025-12-06 01:37:50 | INFO     | LLM_TRACE | CONTENT HEAD:
+{
+  "queries": [
+    "mamba state space model time series",
+    "mamba transformer weather forecasting",
+    "time series forecasting weather data"
+  ]
+}...
+2025-12-06 01:37:50 | INFO     | LLM_TRACE | ============================================================
+
+2025-12-06 01:38:04 | INFO     | LLM_TRACE | ======== [REQUEST] Model: DeepSeek-V3.2-Exp ========
+2025-12-06 01:38:04 | INFO     | LLM_TRACE | URL: https://llmapi.paratera.com/v1
+2025-12-06 01:38:04 | INFO     | LLM_TRACE | PROMPT HEAD:
+You are a Critical Reviewer for a top-tier CS conference (e.g., CVPR, NeurIPS, CCS).
+
+User Idea: "I want to use Mamba state space models for time series forecasting on weather data, comparing it with ...
+2025-12-06 01:38:04 | INFO     | LLM_TRACE | --------------------------------------------------
+2025-12-06 01:38:45 | INFO     | LLM_TRACE | ======== [RESPONSE] ========
+2025-12-06 01:38:45 | INFO     | LLM_TRACE | CONTENT HEAD:
+{
+  "refined_idea": "This research proposes a systematic evaluation of Mamba state space models for multivariate weather time series forecasting, with a specific focus on their capability to capture l...
+2025-12-06 01:38:45 | INFO     | LLM_TRACE | ============================================================
+
+2025-12-06 01:38:45 | INFO     | LLM_TRACE | ======== [REQUEST] Model: DeepSeek-V3.2-Exp ========
+2025-12-06 01:38:45 | INFO     | LLM_TRACE | URL: https://llmapi.paratera.com/v1
+2025-12-06 01:38:45 | INFO     | LLM_TRACE | PROMPT HEAD:
+You are an academic search assistant.
+The user will provide a research context.
+
+Your task:
+1. Analyze the context to understand the *current* research goal.
+2. Extract 3 effective, specific academic ...
+2025-12-06 01:38:45 | INFO     | LLM_TRACE | --------------------------------------------------
+2025-12-06 01:38:47 | INFO     | LLM_TRACE | ======== [RESPONSE] ========
+2025-12-06 01:38:47 | INFO     | LLM_TRACE | CONTENT HEAD:
+{
+  "queries": [
+    "mamba state space weather forecasting",
+    "long range dependencies time series",
+    "transformer mamba benchmark efficiency"
+  ]
+}...
+2025-12-06 01:38:47 | INFO     | LLM_TRACE | ============================================================
+
+2025-12-06 01:39:00 | INFO     | LLM_TRACE | ======== [REQUEST] Model: DeepSeek-V3.2-Exp ========
+2025-12-06 01:39:00 | INFO     | LLM_TRACE | URL: https://llmapi.paratera.com/v1
+2025-12-06 01:39:00 | INFO     | LLM_TRACE | PROMPT HEAD:
+You are a Critical Reviewer for a top-tier CS conference (e.g., CVPR, NeurIPS, CCS).
+
+User Idea: "This research proposes a systematic evaluation of Mamba state space models for multivariate weather ti...
+2025-12-06 01:39:00 | INFO     | LLM_TRACE | --------------------------------------------------
+2025-12-06 01:39:41 | INFO     | LLM_TRACE | ======== [RESPONSE] ========
+2025-12-06 01:39:41 | INFO     | LLM_TRACE | CONTENT HEAD:
+```json
+{
+  "refined_idea": "This research conducts a systematic evaluation of Mamba state space models for multivariate weather time series forecasting, with rigorous analysis of their theoretical ad...
+2025-12-06 01:39:41 | INFO     | LLM_TRACE | ============================================================
+
+2025-12-06 01:39:41 | INFO     | LLM_TRACE | ======== [REQUEST] Model: DeepSeek-V3.2-Exp ========
+2025-12-06 01:39:41 | INFO     | LLM_TRACE | URL: https://llmapi.paratera.com/v1
+2025-12-06 01:39:41 | INFO     | LLM_TRACE | PROMPT HEAD:
+You are the infamous **"Reviewer #2"** for a top-tier CS conference (e.g., CVPR, NeurIPS, S&P).
+You are skeptical, critical, and hard to please. You assume the submission is flawed until proven otherw...
+2025-12-06 01:39:41 | INFO     | LLM_TRACE | --------------------------------------------------
+2025-12-06 01:39:52 | INFO     | LLM_TRACE | ======== [RESPONSE] ========
+2025-12-06 01:39:52 | INFO     | LLM_TRACE | CONTENT HEAD:
+{
+  "decision": "REVISE",
+  "score": 5,
+  "critique": "The proposal identifies relevant limitations in existing methods but suffers from several critical weaknesses. First, the gap analysis is descrip...
+2025-12-06 01:39:52 | INFO     | LLM_TRACE | ============================================================
+
+2025-12-06 01:39:52 | INFO     | LLM_TRACE | ======== [REQUEST] Model: DeepSeek-V3.2-Exp ========
+2025-12-06 01:39:52 | INFO     | LLM_TRACE | URL: https://llmapi.paratera.com/v1
+2025-12-06 01:39:52 | INFO     | LLM_TRACE | PROMPT HEAD:
+You are an academic search assistant.
+The user will provide a research context.
+
+Your task:
+1. Analyze the context to understand the *current* research goal.
+2. Extract 3 effective, specific academic ...
+2025-12-06 01:39:52 | INFO     | LLM_TRACE | --------------------------------------------------
+2025-12-06 01:39:54 | INFO     | LLM_TRACE | ======== [RESPONSE] ========
+2025-12-06 01:39:54 | INFO     | LLM_TRACE | CONTENT HEAD:
+{
+  "queries": [
+    "mamba state space weather forecasting",
+    "multivariate time series transformers",
+    "long range dependencies time series"
+  ]
+}...
+2025-12-06 01:39:54 | INFO     | LLM_TRACE | ============================================================
+
+2025-12-06 01:40:08 | INFO     | LLM_TRACE | ======== [REQUEST] Model: DeepSeek-V3.2-Exp ========
+2025-12-06 01:40:08 | INFO     | LLM_TRACE | URL: https://llmapi.paratera.com/v1
+2025-12-06 01:40:08 | INFO     | LLM_TRACE | PROMPT HEAD:
+You are a Critical Reviewer for a top-tier CS conference (e.g., CVPR, NeurIPS, CCS).
+
+User Idea: "This research conducts a systematic evaluation of Mamba state space models for multivariate weather ti...
+2025-12-06 01:40:08 | INFO     | LLM_TRACE | --------------------------------------------------
+2025-12-06 01:40:46 | INFO     | LLM_TRACE | ======== [RESPONSE] ========
+2025-12-06 01:40:46 | INFO     | LLM_TRACE | CONTENT HEAD:
+```json
+{
+  "refined_idea": "This research introduces a theoretically-grounded framework for adapting Mamba state space models to multivariate weather forecasting by addressing fundamental structural ...
+2025-12-06 01:40:46 | INFO     | LLM_TRACE | ============================================================
+
+2025-12-06 01:40:46 | INFO     | LLM_TRACE | ======== [REQUEST] Model: DeepSeek-V3.2-Exp ========
+2025-12-06 01:40:46 | INFO     | LLM_TRACE | URL: https://llmapi.paratera.com/v1
+2025-12-06 01:40:46 | INFO     | LLM_TRACE | PROMPT HEAD:
+You are an academic search assistant.
+The user will provide a research context.
+
+Your task:
+1. Analyze the context to understand the *current* research goal.
+2. Extract 3 effective, specific academic ...
+2025-12-06 01:40:46 | INFO     | LLM_TRACE | --------------------------------------------------
+2025-12-06 01:40:48 | INFO     | LLM_TRACE | ======== [RESPONSE] ========
+2025-12-06 01:40:48 | INFO     | LLM_TRACE | CONTENT HEAD:
+{
+  "queries": [
+    "mamba state space model weather",
+    "multivariate weather forecasting transformers",
+    "non-stationary atmospheric dynamics modeling"
+  ]
+}...
+2025-12-06 01:40:48 | INFO     | LLM_TRACE | ============================================================
+
+2025-12-06 01:41:01 | INFO     | LLM_TRACE | ======== [REQUEST] Model: DeepSeek-V3.2-Exp ========
+2025-12-06 01:41:01 | INFO     | LLM_TRACE | URL: https://llmapi.paratera.com/v1
+2025-12-06 01:41:01 | INFO     | LLM_TRACE | PROMPT HEAD:
+You are a Critical Reviewer for a top-tier CS conference (e.g., CVPR, NeurIPS, CCS).
+
+User Idea: "This research introduces a theoretically-grounded framework for adapting Mamba state space models to m...
+2025-12-06 01:41:01 | INFO     | LLM_TRACE | --------------------------------------------------
+2025-12-06 01:41:44 | INFO     | LLM_TRACE | ======== [RESPONSE] ========
+2025-12-06 01:41:44 | INFO     | LLM_TRACE | CONTENT HEAD:
+{
+  "refined_idea": "This research introduces a physics-informed state space model framework that addresses the structural limitations of existing Mamba architectures for multivariate weather forecast...
+2025-12-06 01:41:44 | INFO     | LLM_TRACE | ============================================================
+
+2025-12-06 01:41:44 | INFO     | LLM_TRACE | ======== [REQUEST] Model: DeepSeek-V3.2-Exp ========
+2025-12-06 01:41:44 | INFO     | LLM_TRACE | URL: https://llmapi.paratera.com/v1
+2025-12-06 01:41:44 | INFO     | LLM_TRACE | PROMPT HEAD:
+You are the infamous **"Reviewer #2"** for a top-tier CS conference (e.g., CVPR, NeurIPS, S&P).
+You are skeptical, critical, and hard to please. You assume the submission is flawed until proven otherw...
+2025-12-06 01:41:44 | INFO     | LLM_TRACE | --------------------------------------------------
+2025-12-06 01:41:56 | INFO     | LLM_TRACE | ======== [RESPONSE] ========
+2025-12-06 01:41:56 | INFO     | LLM_TRACE | CONTENT HEAD:
+{
+  "decision": "REVISE",
+  "score": 5,
+  "critique": "The proposal identifies relevant limitations in existing methods but suffers from several critical weaknesses. First, while the gap analysis is c...
+2025-12-06 01:41:56 | INFO     | LLM_TRACE | ============================================================
+
+2025-12-06 01:41:56 | INFO     | LLM_TRACE | ======== [REQUEST] Model: DeepSeek-V3.2-Exp ========
+2025-12-06 01:41:56 | INFO     | LLM_TRACE | URL: https://llmapi.paratera.com/v1
+2025-12-06 01:41:56 | INFO     | LLM_TRACE | PROMPT HEAD:
+You are an academic search assistant.
+The user will provide a research context.
+
+Your task:
+1. Analyze the context to understand the *current* research goal.
+2. Extract 3 effective, specific academic ...
+2025-12-06 01:41:56 | INFO     | LLM_TRACE | --------------------------------------------------
+2025-12-06 01:41:58 | INFO     | LLM_TRACE | ======== [RESPONSE] ========
+2025-12-06 01:41:58 | INFO     | LLM_TRACE | CONTENT HEAD:
+{
+  "queries": [
+    "Mamba weather forecasting multivariate",
+    "state space models atmospheric physics",
+    "transformer Mamba benchmark meteorology"
+  ]
+}...
+2025-12-06 01:41:58 | INFO     | LLM_TRACE | ============================================================
+
+2025-12-06 01:42:11 | INFO     | LLM_TRACE | ======== [REQUEST] Model: DeepSeek-V3.2-Exp ========
+2025-12-06 01:42:11 | INFO     | LLM_TRACE | URL: https://llmapi.paratera.com/v1
+2025-12-06 01:42:11 | INFO     | LLM_TRACE | PROMPT HEAD:
+You are a Critical Reviewer for a top-tier CS conference (e.g., CVPR, NeurIPS, CCS).
+
+User Idea: "This research introduces a physics-informed state space model framework that addresses the structural ...
+2025-12-06 01:42:11 | INFO     | LLM_TRACE | --------------------------------------------------
+2025-12-06 01:43:01 | INFO     | LLM_TRACE | ======== [RESPONSE] ========
+2025-12-06 01:43:01 | INFO     | LLM_TRACE | CONTENT HEAD:
+```json
+{
+  "refined_idea": "This research introduces a physics-informed state space model (PI-SSM) that fundamentally addresses the mathematical limitations of existing Mamba architectures for multiv...
+2025-12-06 01:43:01 | INFO     | LLM_TRACE | ============================================================
+
+2025-12-06 01:43:01 | INFO     | LLM_TRACE | ======== [REQUEST] Model: DeepSeek-V3.2-Exp ========
+2025-12-06 01:43:01 | INFO     | LLM_TRACE | URL: https://llmapi.paratera.com/v1
+2025-12-06 01:43:01 | INFO     | LLM_TRACE | PROMPT HEAD:
+You are an academic search assistant.
+The user will provide a research context.
+
+Your task:
+1. Analyze the context to understand the *current* research goal.
+2. Extract 3 effective, specific academic ...
+2025-12-06 01:43:01 | INFO     | LLM_TRACE | --------------------------------------------------
+2025-12-06 01:43:02 | INFO     | LLM_TRACE | ======== [RESPONSE] ========
+2025-12-06 01:43:02 | INFO     | LLM_TRACE | CONTENT HEAD:
+{
+  "queries": [
+    "physics informed state space model",
+    "mamba weather forecasting limitations",
+    "multivariate weather forecasting ssm"
+  ]
+}...
+2025-12-06 01:43:02 | INFO     | LLM_TRACE | ============================================================
+
+2025-12-06 01:43:14 | INFO     | LLM_TRACE | ======== [REQUEST] Model: DeepSeek-V3.2-Exp ========
+2025-12-06 01:43:14 | INFO     | LLM_TRACE | URL: https://llmapi.paratera.com/v1
+2025-12-06 01:43:14 | INFO     | LLM_TRACE | PROMPT HEAD:
+You are a Critical Reviewer for a top-tier CS conference (e.g., CVPR, NeurIPS, CCS).
+
+User Idea: "This research introduces a physics-informed state space model (PI-SSM) that fundamentally addresses th...
+2025-12-06 01:43:14 | INFO     | LLM_TRACE | --------------------------------------------------
+2025-12-06 01:43:58 | INFO     | LLM_TRACE | ======== [RESPONSE] ========
+2025-12-06 01:43:58 | INFO     | LLM_TRACE | CONTENT HEAD:
+{
+  "refined_idea": "This research introduces a Physics-Informed State Space Model (PI-SSM) that addresses the mathematical limitations of existing Mamba architectures for multivariate weather forecas...
+2025-12-06 01:43:58 | INFO     | LLM_TRACE | ============================================================
+
+2025-12-06 01:43:58 | INFO     | LLM_TRACE | ======== [REQUEST] Model: DeepSeek-V3.2-Exp ========
+2025-12-06 01:43:58 | INFO     | LLM_TRACE | URL: https://llmapi.paratera.com/v1
+2025-12-06 01:43:58 | INFO     | LLM_TRACE | PROMPT HEAD:
+You are the infamous **"Reviewer #2"** for a top-tier CS conference (e.g., CVPR, NeurIPS, S&P).
+You are skeptical, critical, and hard to please. You assume the submission is flawed until proven otherw...
+2025-12-06 01:43:58 | INFO     | LLM_TRACE | --------------------------------------------------
+2025-12-06 01:44:10 | INFO     | LLM_TRACE | ======== [RESPONSE] ========
+2025-12-06 01:44:10 | INFO     | LLM_TRACE | CONTENT HEAD:
+{
+  "decision": "REVISE",
+  "score": 6,
+  "critique": "The proposal demonstrates strong intuition and identifies a meaningful research direction, but suffers from critical theoretical and methodologic...
+2025-12-06 01:44:10 | INFO     | LLM_TRACE | ============================================================
+
+2025-12-06 01:46:53 | INFO     | LLM_TRACE | ======== [REQUEST] Model: DeepSeek-V3.2-Exp ========
+2025-12-06 01:46:53 | INFO     | LLM_TRACE | URL: https://llmapi.paratera.com/v1
+2025-12-06 01:46:53 | INFO     | LLM_TRACE | PROMPT HEAD:
+You are a Distinguished Computer Science Professor.
+Your goal is to develop a **NOVEL** theoretical framework based on the user's idea.
+
+**CRITICAL WARNING - ANTI-PLAGIARISM**:
+- The "Related Work" pr...
+2025-12-06 01:46:53 | INFO     | LLM_TRACE | --------------------------------------------------
+2025-12-06 01:47:28 | INFO     | LLM_TRACE | ======== [RESPONSE] ========
+2025-12-06 01:47:28 | INFO     | LLM_TRACE | CONTENT HEAD:
+```json
+{
+  "research_field": "Multivariate Weather Forecasting with Physics-Informed Deep Learning",
+  "problem_formulation": "Given multivariate weather time series $X = \\{x_1, x_2, ..., x_T\\} \\i...
+2025-12-06 01:47:28 | INFO     | LLM_TRACE | ============================================================
+
+2025-12-06 01:47:28 | INFO     | LLM_TRACE | ======== [REQUEST] Model: DeepSeek-V3.2-Exp ========
+2025-12-06 01:47:28 | INFO     | LLM_TRACE | URL: https://llmapi.paratera.com/v1
+2025-12-06 01:47:28 | INFO     | LLM_TRACE | PROMPT HEAD:
+You are a Distinguished Computer Science Professor.
+Your goal is to develop a **NOVEL** theoretical framework based on the user's idea.
+
+**CRITICAL WARNING - ANTI-PLAGIARISM**:
+- The "Related Work" pr...
+2025-12-06 01:47:28 | INFO     | LLM_TRACE | --------------------------------------------------
+2025-12-06 01:47:28 | INFO     | LLM_TRACE | ======== [RESPONSE] ========
+2025-12-06 01:47:28 | INFO     | LLM_TRACE | CONTENT HEAD:
+```json
+{
+  "research_field": "Multivariate Weather Forecasting with Physics-Informed Deep Learning",
+  "problem_formulation": "Given multivariate weather time series $X = \\{x_1, x_2, ..., x_T\\} \\i...
+2025-12-06 01:47:28 | INFO     | LLM_TRACE | ============================================================
+
+2025-12-06 01:47:28 | INFO     | LLM_TRACE | ======== [REQUEST] Model: DeepSeek-V3.2-Exp ========
+2025-12-06 01:47:28 | INFO     | LLM_TRACE | URL: https://llmapi.paratera.com/v1
+2025-12-06 01:47:28 | INFO     | LLM_TRACE | PROMPT HEAD:
+You are the infamous **"Reviewer #2"** for a top-tier CS conference (e.g., CVPR, NeurIPS, S&P).
+You are skeptical, critical, and hard to please. You assume the submission is flawed until proven otherw...
+2025-12-06 01:47:28 | INFO     | LLM_TRACE | --------------------------------------------------
+2025-12-06 01:47:43 | INFO     | LLM_TRACE | ======== [RESPONSE] ========
+2025-12-06 01:47:43 | INFO     | LLM_TRACE | CONTENT HEAD:
+{
+  "decision": "REVISE",
+  "score": 6,
+  "critique": "The theoretical framework presents an interesting intuition but suffers from critical flaws in rigor and completeness. First, the mathematical ex...
+2025-12-06 01:47:43 | INFO     | LLM_TRACE | ============================================================
+
+2025-12-06 01:47:43 | INFO     | LLM_TRACE | ======== [REQUEST] Model: DeepSeek-V3.2-Exp ========
+2025-12-06 01:47:43 | INFO     | LLM_TRACE | URL: https://llmapi.paratera.com/v1
+2025-12-06 01:47:43 | INFO     | LLM_TRACE | PROMPT HEAD:
+You are a Distinguished Computer Science Professor.
+Your goal is to develop a **NOVEL** theoretical framework based on the user's idea.
+
+**CRITICAL WARNING - ANTI-PLAGIARISM**:
+- The "Related Work" pr...
+2025-12-06 01:47:43 | INFO     | LLM_TRACE | --------------------------------------------------
+2025-12-06 01:47:43 | INFO     | LLM_TRACE | ======== [RESPONSE] ========
+2025-12-06 01:47:43 | INFO     | LLM_TRACE | CONTENT HEAD:
+```json
+{
+  "research_field": "Multivariate Weather Forecasting with Physics-Informed Deep Learning",
+  "problem_formulation": "Given multivariate weather time series $X = \\{x_1, x_2, ..., x_T\\} \\i...
+2025-12-06 01:47:43 | INFO     | LLM_TRACE | ============================================================
+
+2025-12-06 01:47:43 | INFO     | LLM_TRACE | ======== [REQUEST] Model: DeepSeek-V3.2-Exp ========
+2025-12-06 01:47:43 | INFO     | LLM_TRACE | URL: https://llmapi.paratera.com/v1
+2025-12-06 01:47:43 | INFO     | LLM_TRACE | PROMPT HEAD:
+You are a Distinguished Computer Science Professor.
+Your goal is to develop a **NOVEL** theoretical framework based on the user's idea.
+
+**CRITICAL WARNING - ANTI-PLAGIARISM**:
+- The "Related Work" pr...
+2025-12-06 01:47:43 | INFO     | LLM_TRACE | --------------------------------------------------
+2025-12-06 01:47:44 | INFO     | LLM_TRACE | ======== [RESPONSE] ========
+2025-12-06 01:47:44 | INFO     | LLM_TRACE | CONTENT HEAD:
+```json
+{
+  "research_field": "Multivariate Weather Forecasting with Physics-Informed Deep Learning",
+  "problem_formulation": "Given multivariate weather time series $X = \\{x_1, x_2, ..., x_T\\} \\i...
+2025-12-06 01:47:44 | INFO     | LLM_TRACE | ============================================================
+
+2025-12-06 01:47:44 | INFO     | LLM_TRACE | ======== [REQUEST] Model: DeepSeek-V3.2-Exp ========
+2025-12-06 01:47:44 | INFO     | LLM_TRACE | URL: https://llmapi.paratera.com/v1
+2025-12-06 01:47:44 | INFO     | LLM_TRACE | PROMPT HEAD:
+You are the infamous **"Reviewer #2"** for a top-tier CS conference (e.g., CVPR, NeurIPS, S&P).
+You are skeptical, critical, and hard to please. You assume the submission is flawed until proven otherw...
+2025-12-06 01:47:44 | INFO     | LLM_TRACE | --------------------------------------------------
+2025-12-06 01:47:54 | INFO     | LLM_TRACE | ======== [RESPONSE] ========
+2025-12-06 01:47:54 | INFO     | LLM_TRACE | CONTENT HEAD:
+{
+  "decision": "REVISE",
+  "score": 6,
+  "critique": "The theoretical framework shows promising intuition but lacks sufficient mathematical rigor for a top-tier conference. While the paper includes s...
+2025-12-06 01:47:54 | INFO     | LLM_TRACE | ============================================================
+
+2025-12-06 01:47:54 | INFO     | LLM_TRACE | ======== [REQUEST] Model: DeepSeek-V3.2-Exp ========
+2025-12-06 01:47:54 | INFO     | LLM_TRACE | URL: https://llmapi.paratera.com/v1
+2025-12-06 01:47:54 | INFO     | LLM_TRACE | PROMPT HEAD:
+You are a Distinguished Computer Science Professor.
+Your goal is to develop a **NOVEL** theoretical framework based on the user's idea.
+
+**CRITICAL WARNING - ANTI-PLAGIARISM**:
+- The "Related Work" pr...
+2025-12-06 01:47:54 | INFO     | LLM_TRACE | --------------------------------------------------
+2025-12-06 01:47:54 | INFO     | LLM_TRACE | ======== [RESPONSE] ========
+2025-12-06 01:47:54 | INFO     | LLM_TRACE | CONTENT HEAD:
+```json
+{
+  "research_field": "Multivariate Weather Forecasting with Physics-Informed Deep Learning",
+  "problem_formulation": "Given multivariate weather time series $X = \\{x_1, x_2, ..., x_T\\} \\i...
+2025-12-06 01:47:54 | INFO     | LLM_TRACE | ============================================================
+
+2025-12-06 01:47:54 | INFO     | LLM_TRACE | ======== [REQUEST] Model: DeepSeek-V3.2-Exp ========
+2025-12-06 01:47:54 | INFO     | LLM_TRACE | URL: https://llmapi.paratera.com/v1
+2025-12-06 01:47:54 | INFO     | LLM_TRACE | PROMPT HEAD:
+You are a Distinguished Computer Science Professor.
+Your goal is to develop a **NOVEL** theoretical framework based on the user's idea.
+
+**CRITICAL WARNING - ANTI-PLAGIARISM**:
+- The "Related Work" pr...
+2025-12-06 01:47:54 | INFO     | LLM_TRACE | --------------------------------------------------
+2025-12-06 01:47:54 | INFO     | LLM_TRACE | ======== [RESPONSE] ========
+2025-12-06 01:47:54 | INFO     | LLM_TRACE | CONTENT HEAD:
+```json
+{
+  "research_field": "Multivariate Weather Forecasting with Physics-Informed Deep Learning",
+  "problem_formulation": "Given multivariate weather time series $X = \\{x_1, x_2, ..., x_T\\} \\i...
+2025-12-06 01:47:54 | INFO     | LLM_TRACE | ============================================================
+
+2025-12-06 01:47:54 | INFO     | LLM_TRACE | ======== [REQUEST] Model: DeepSeek-V3.2-Exp ========
+2025-12-06 01:47:54 | INFO     | LLM_TRACE | URL: https://llmapi.paratera.com/v1
+2025-12-06 01:47:54 | INFO     | LLM_TRACE | PROMPT HEAD:
+You are the infamous **"Reviewer #2"** for a top-tier CS conference (e.g., CVPR, NeurIPS, S&P).
+You are skeptical, critical, and hard to please. You assume the submission is flawed until proven otherw...
+2025-12-06 01:47:54 | INFO     | LLM_TRACE | --------------------------------------------------
+2025-12-06 01:47:54 | INFO     | LLM_TRACE | ======== [RESPONSE] ========
+2025-12-06 01:47:54 | INFO     | LLM_TRACE | CONTENT HEAD:
+{
+  "decision": "REVISE",
+  "score": 6,
+  "critique": "The theoretical framework shows promising intuition but lacks sufficient mathematical rigor for a top-tier conference. While the paper includes s...
+2025-12-06 01:47:54 | INFO     | LLM_TRACE | ============================================================
+
+2025-12-06 01:47:54 | INFO     | LLM_TRACE | ======== [REQUEST] Model: DeepSeek-V3.2-Exp ========
+2025-12-06 01:47:54 | INFO     | LLM_TRACE | URL: https://llmapi.paratera.com/v1
+2025-12-06 01:47:54 | INFO     | LLM_TRACE | PROMPT HEAD:
+You are a Principal Software Architect. 
+Your goal is to produce a **Low-Level Engineering Specification** ready for implementation.
+
+**THE GOLDEN RULE**: 
+- Do NOT write English descriptions like "In...
+2025-12-06 01:47:54 | INFO     | LLM_TRACE | --------------------------------------------------
+2025-12-06 01:51:04 | INFO     | LLM_TRACE | ======== [RESPONSE] ========
+2025-12-06 01:51:04 | INFO     | LLM_TRACE | CONTENT HEAD:
+```json
+{
+  "project_name": "PHYSICS-Mamba",
+  "architecture_style": "Physics-Informed State Space Model with Regime Awareness",
+  "requirements": [
+    "torch>=2.0.0",
+    "numpy>=1.21.0",
+    "scipy...
+2025-12-06 01:51:04 | INFO     | LLM_TRACE | ============================================================
+
+2025-12-06 01:51:04 | INFO     | LLM_TRACE | ======== [REQUEST] Model: DeepSeek-V3.2-Exp ========
+2025-12-06 01:51:04 | INFO     | LLM_TRACE | URL: https://llmapi.paratera.com/v1
+2025-12-06 01:51:04 | INFO     | LLM_TRACE | PROMPT HEAD:
+You are the infamous **"Reviewer #2"** for a top-tier CS conference (e.g., CVPR, NeurIPS, S&P).
+You are skeptical, critical, and hard to please. You assume the submission is flawed until proven otherw...
+2025-12-06 01:51:04 | INFO     | LLM_TRACE | --------------------------------------------------
+2025-12-06 01:51:15 | INFO     | LLM_TRACE | ======== [RESPONSE] ========
+2025-12-06 01:51:15 | INFO     | LLM_TRACE | CONTENT HEAD:
+{
+  "decision": "REVISE",
+  "score": 4,
+  "critique": "The code architecture shows some modularity but has critical flaws. First, there is no clear mapping between the mathematical theory and implemen...
+2025-12-06 01:51:15 | INFO     | LLM_TRACE | ============================================================
+
+2025-12-06 01:51:15 | INFO     | LLM_TRACE | ======== [REQUEST] Model: DeepSeek-V3.2-Exp ========
+2025-12-06 01:51:15 | INFO     | LLM_TRACE | URL: https://llmapi.paratera.com/v1
+2025-12-06 01:51:15 | INFO     | LLM_TRACE | PROMPT HEAD:
+You are a Principal Software Architect. 
+Your goal is to produce a **Low-Level Engineering Specification** ready for implementation.
+
+**THE GOLDEN RULE**: 
+- Do NOT write English descriptions like "In...
+2025-12-06 01:51:15 | INFO     | LLM_TRACE | --------------------------------------------------
+2025-12-06 01:55:20 | INFO     | LLM_TRACE | ======== [RESPONSE] ========
+2025-12-06 01:55:20 | INFO     | LLM_TRACE | CONTENT HEAD:
+```json
+{
+  "project_name": "PHYSICS-Mamba",
+  "architecture_style": "Physics-Informed State Space Model with Regime Awareness",
+  "requirements": [
+    "torch>=2.0.0",
+    "numpy>=1.21.0",
+    "scipy...
+2025-12-06 01:55:20 | INFO     | LLM_TRACE | ============================================================
+
+2025-12-06 01:55:20 | INFO     | LLM_TRACE | ======== [REQUEST] Model: DeepSeek-V3.2-Exp ========
+2025-12-06 01:55:20 | INFO     | LLM_TRACE | URL: https://llmapi.paratera.com/v1
+2025-12-06 01:55:20 | INFO     | LLM_TRACE | PROMPT HEAD:
+You are a Principal Software Architect. 
+Your goal is to produce a **Low-Level Engineering Specification** ready for implementation.
+
+**THE GOLDEN RULE**: 
+- Do NOT write English descriptions like "In...
+2025-12-06 01:55:20 | INFO     | LLM_TRACE | --------------------------------------------------
+2025-12-06 01:55:20 | INFO     | LLM_TRACE | ======== [RESPONSE] ========
+2025-12-06 01:55:20 | INFO     | LLM_TRACE | CONTENT HEAD:
+```json
+{
+  "project_name": "PHYSICS-Mamba",
+  "architecture_style": "Physics-Informed State Space Model with Regime Awareness",
+  "requirements": [
+    "torch>=2.0.0",
+    "numpy>=1.21.0",
+    "scipy...
+2025-12-06 01:55:20 | INFO     | LLM_TRACE | ============================================================
+
+2025-12-06 01:55:20 | INFO     | LLM_TRACE | ======== [REQUEST] Model: DeepSeek-V3.2-Exp ========
+2025-12-06 01:55:20 | INFO     | LLM_TRACE | URL: https://llmapi.paratera.com/v1
+2025-12-06 01:55:20 | INFO     | LLM_TRACE | PROMPT HEAD:
+You are a Principal Software Architect. 
+Your goal is to produce a **Low-Level Engineering Specification** ready for implementation.
+
+**THE GOLDEN RULE**: 
+- Do NOT write English descriptions like "In...
+2025-12-06 01:55:20 | INFO     | LLM_TRACE | --------------------------------------------------
+2025-12-06 01:55:21 | INFO     | LLM_TRACE | ======== [RESPONSE] ========
+2025-12-06 01:55:21 | INFO     | LLM_TRACE | CONTENT HEAD:
+```json
+{
+  "project_name": "PHYSICS-Mamba",
+  "architecture_style": "Physics-Informed State Space Model with Regime Awareness",
+  "requirements": [
+    "torch>=2.0.0",
+    "numpy>=1.21.0",
+    "scipy...
+2025-12-06 01:55:21 | INFO     | LLM_TRACE | ============================================================
+
+2025-12-06 01:55:21 | INFO     | LLM_TRACE | ======== [REQUEST] Model: DeepSeek-V3.2-Exp ========
+2025-12-06 01:55:21 | INFO     | LLM_TRACE | URL: https://llmapi.paratera.com/v1
+2025-12-06 01:55:21 | INFO     | LLM_TRACE | PROMPT HEAD:
+You are the infamous **"Reviewer #2"** for a top-tier CS conference (e.g., CVPR, NeurIPS, S&P).
+You are skeptical, critical, and hard to please. You assume the submission is flawed until proven otherw...
+2025-12-06 01:55:21 | INFO     | LLM_TRACE | --------------------------------------------------
+2025-12-06 01:55:32 | INFO     | LLM_TRACE | ======== [RESPONSE] ========
+2025-12-06 01:55:32 | INFO     | LLM_TRACE | CONTENT HEAD:
+{
+  "decision": "REVISE",
+  "score": 5,
+  "critique": "The system architecture shows good modularity with proper separation of concerns (Data/Model/Train) and includes a configuration system, which me...
+2025-12-06 01:55:32 | INFO     | LLM_TRACE | ============================================================
+
+2025-12-06 02:07:14 | INFO     | LLM_TRACE | ======== [REQUEST] Model: DeepSeek-V3.2-Exp ========
+2025-12-06 02:07:14 | INFO     | LLM_TRACE | URL: https://llmapi.paratera.com/v1
+2025-12-06 02:07:14 | INFO     | LLM_TRACE | PROMPT HEAD:
+You are a Distinguished Computer Science Professor.
+Your goal is to develop a **NOVEL** theoretical framework based on the user's idea.
+
+**CRITICAL WARNING - ANTI-PLAGIARISM**:
+- The "Related Work" pr...
+2025-12-06 02:07:14 | INFO     | LLM_TRACE | --------------------------------------------------
+2025-12-06 02:07:45 | INFO     | LLM_TRACE | ======== [RESPONSE] ========
+2025-12-06 02:07:45 | INFO     | LLM_TRACE | CONTENT HEAD:
+```json
+{
+  "research_field": "Multivariate Time Series Forecasting with Physics-Informed Deep Learning",
+  "problem_formulation": "Given a multivariate weather time series $\\mathbf{X} = \\{\\mathbf{...
+2025-12-06 02:07:45 | INFO     | LLM_TRACE | ============================================================
+
+2025-12-06 02:07:45 | INFO     | LLM_TRACE | ======== [REQUEST] Model: DeepSeek-V3.2-Exp ========
+2025-12-06 02:07:45 | INFO     | LLM_TRACE | URL: https://llmapi.paratera.com/v1
+2025-12-06 02:07:45 | INFO     | LLM_TRACE | PROMPT HEAD:
+You are a Distinguished Computer Science Professor.
+Your goal is to develop a **NOVEL** theoretical framework based on the user's idea.
+
+**CRITICAL WARNING - ANTI-PLAGIARISM**:
+- The "Related Work" pr...
+2025-12-06 02:07:45 | INFO     | LLM_TRACE | --------------------------------------------------
+2025-12-06 02:07:46 | INFO     | LLM_TRACE | ======== [RESPONSE] ========
+2025-12-06 02:07:46 | INFO     | LLM_TRACE | CONTENT HEAD:
+```json
+{
+  "research_field": "Multivariate Time Series Forecasting with Physics-Informed Deep Learning",
+  "problem_formulation": "Given a multivariate weather time series $\\mathbf{X} = \\{\\mathbf{...
+2025-12-06 02:07:46 | INFO     | LLM_TRACE | ============================================================
+
+2025-12-06 02:07:46 | INFO     | LLM_TRACE | ======== [REQUEST] Model: DeepSeek-V3.2-Exp ========
+2025-12-06 02:07:46 | INFO     | LLM_TRACE | URL: https://llmapi.paratera.com/v1
+2025-12-06 02:07:46 | INFO     | LLM_TRACE | PROMPT HEAD:
+You are the infamous **"Reviewer #2"** for a top-tier CS conference (e.g., CVPR, NeurIPS, S&P).
+You are skeptical, critical, and hard to please. You assume the submission is flawed until proven otherw...
+2025-12-06 02:07:46 | INFO     | LLM_TRACE | --------------------------------------------------
+2025-12-06 02:07:59 | INFO     | LLM_TRACE | ======== [RESPONSE] ========
+2025-12-06 02:07:59 | INFO     | LLM_TRACE | CONTENT HEAD:
+{
+  "decision": "REVISE",
+  "score": 6,
+  "critique": "The theoretical framework presents an ambitious integration of state-space models and physics, but suffers from critical flaws in rigor and compl...
+2025-12-06 02:07:59 | INFO     | LLM_TRACE | ============================================================
+
+2025-12-06 02:07:59 | INFO     | LLM_TRACE | ======== [REQUEST] Model: DeepSeek-V3.2-Exp ========
+2025-12-06 02:07:59 | INFO     | LLM_TRACE | URL: https://llmapi.paratera.com/v1
+2025-12-06 02:07:59 | INFO     | LLM_TRACE | PROMPT HEAD:
+You are a Distinguished Computer Science Professor.
+Your goal is to develop a **NOVEL** theoretical framework based on the user's idea.
+
+**CRITICAL WARNING - ANTI-PLAGIARISM**:
+- The "Related Work" pr...
+2025-12-06 02:07:59 | INFO     | LLM_TRACE | --------------------------------------------------
+2025-12-06 02:07:59 | INFO     | LLM_TRACE | ======== [RESPONSE] ========
+2025-12-06 02:07:59 | INFO     | LLM_TRACE | CONTENT HEAD:
+```json
+{
+  "research_field": "Multivariate Time Series Forecasting with Physics-Informed Deep Learning",
+  "problem_formulation": "Given a multivariate weather time series $\\mathbf{X} = \\{\\mathbf{...
+2025-12-06 02:07:59 | INFO     | LLM_TRACE | ============================================================
+
+2025-12-06 02:07:59 | INFO     | LLM_TRACE | ======== [REQUEST] Model: DeepSeek-V3.2-Exp ========
+2025-12-06 02:07:59 | INFO     | LLM_TRACE | URL: https://llmapi.paratera.com/v1
+2025-12-06 02:07:59 | INFO     | LLM_TRACE | PROMPT HEAD:
+You are a Distinguished Computer Science Professor.
+Your goal is to develop a **NOVEL** theoretical framework based on the user's idea.
+
+**CRITICAL WARNING - ANTI-PLAGIARISM**:
+- The "Related Work" pr...
+2025-12-06 02:07:59 | INFO     | LLM_TRACE | --------------------------------------------------
+2025-12-06 02:08:01 | INFO     | LLM_TRACE | ======== [RESPONSE] ========
+2025-12-06 02:08:01 | INFO     | LLM_TRACE | CONTENT HEAD:
+```json
+{
+  "research_field": "Multivariate Time Series Forecasting with Physics-Informed Deep Learning",
+  "problem_formulation": "Given a multivariate weather time series $\\mathbf{X} = \\{\\mathbf{...
+2025-12-06 02:08:01 | INFO     | LLM_TRACE | ============================================================
+
+2025-12-06 02:08:01 | INFO     | LLM_TRACE | ======== [REQUEST] Model: DeepSeek-V3.2-Exp ========
+2025-12-06 02:08:01 | INFO     | LLM_TRACE | URL: https://llmapi.paratera.com/v1
+2025-12-06 02:08:01 | INFO     | LLM_TRACE | PROMPT HEAD:
+You are the infamous **"Reviewer #2"** for a top-tier CS conference (e.g., CVPR, NeurIPS, S&P).
+You are skeptical, critical, and hard to please. You assume the submission is flawed until proven otherw...
+2025-12-06 02:08:01 | INFO     | LLM_TRACE | --------------------------------------------------
+2025-12-06 02:08:10 | INFO     | LLM_TRACE | ======== [RESPONSE] ========
+2025-12-06 02:08:10 | INFO     | LLM_TRACE | CONTENT HEAD:
+{
+  "decision": "REVISE",
+  "score": 6,
+  "critique": "The theoretical framework presents interesting ideas but suffers from critical flaws. While the methodology includes mathematical notation, the t...
+2025-12-06 02:08:10 | INFO     | LLM_TRACE | ============================================================
+
+2025-12-06 02:08:10 | INFO     | LLM_TRACE | ======== [REQUEST] Model: DeepSeek-V3.2-Exp ========
+2025-12-06 02:08:10 | INFO     | LLM_TRACE | URL: https://llmapi.paratera.com/v1
+2025-12-06 02:08:10 | INFO     | LLM_TRACE | PROMPT HEAD:
+You are a Distinguished Computer Science Professor.
+Your goal is to develop a **NOVEL** theoretical framework based on the user's idea.
+
+**CRITICAL WARNING - ANTI-PLAGIARISM**:
+- The "Related Work" pr...
+2025-12-06 02:08:10 | INFO     | LLM_TRACE | --------------------------------------------------
+2025-12-06 02:08:10 | INFO     | LLM_TRACE | ======== [RESPONSE] ========
+2025-12-06 02:08:10 | INFO     | LLM_TRACE | CONTENT HEAD:
+```json
+{
+  "research_field": "Multivariate Time Series Forecasting with Physics-Informed Deep Learning",
+  "problem_formulation": "Given a multivariate weather time series $\\mathbf{X} = \\{\\mathbf{...
+2025-12-06 02:08:10 | INFO     | LLM_TRACE | ============================================================
+
+2025-12-06 02:08:10 | INFO     | LLM_TRACE | ======== [REQUEST] Model: DeepSeek-V3.2-Exp ========
+2025-12-06 02:08:10 | INFO     | LLM_TRACE | URL: https://llmapi.paratera.com/v1
+2025-12-06 02:08:10 | INFO     | LLM_TRACE | PROMPT HEAD:
+You are a Distinguished Computer Science Professor.
+Your goal is to develop a **NOVEL** theoretical framework based on the user's idea.
+
+**CRITICAL WARNING - ANTI-PLAGIARISM**:
+- The "Related Work" pr...
+2025-12-06 02:08:10 | INFO     | LLM_TRACE | --------------------------------------------------
+2025-12-06 02:08:10 | INFO     | LLM_TRACE | ======== [RESPONSE] ========
+2025-12-06 02:08:10 | INFO     | LLM_TRACE | CONTENT HEAD:
+```json
+{
+  "research_field": "Multivariate Time Series Forecasting with Physics-Informed Deep Learning",
+  "problem_formulation": "Given a multivariate weather time series $\\mathbf{X} = \\{\\mathbf{...
+2025-12-06 02:08:10 | INFO     | LLM_TRACE | ============================================================
+
+2025-12-06 02:08:10 | INFO     | LLM_TRACE | ======== [REQUEST] Model: DeepSeek-V3.2-Exp ========
+2025-12-06 02:08:10 | INFO     | LLM_TRACE | URL: https://llmapi.paratera.com/v1
+2025-12-06 02:08:10 | INFO     | LLM_TRACE | PROMPT HEAD:
+You are the infamous **"Reviewer #2"** for a top-tier CS conference (e.g., CVPR, NeurIPS, S&P).
+You are skeptical, critical, and hard to please. You assume the submission is flawed until proven otherw...
+2025-12-06 02:08:10 | INFO     | LLM_TRACE | --------------------------------------------------
+2025-12-06 02:08:11 | INFO     | LLM_TRACE | ======== [RESPONSE] ========
+2025-12-06 02:08:11 | INFO     | LLM_TRACE | CONTENT HEAD:
+{
+  "decision": "REVISE",
+  "score": 6,
+  "critique": "The theoretical framework presents interesting ideas but suffers from critical flaws. While the methodology includes mathematical notation, the t...
+2025-12-06 02:08:11 | INFO     | LLM_TRACE | ============================================================
+
+2025-12-06 02:08:11 | INFO     | LLM_TRACE | ======== [REQUEST] Model: DeepSeek-V3.2-Exp ========
+2025-12-06 02:08:11 | INFO     | LLM_TRACE | URL: https://llmapi.paratera.com/v1
+2025-12-06 02:08:11 | INFO     | LLM_TRACE | PROMPT HEAD:
+You are a Principal Software Architect. 
+Your goal is to produce a **Low-Level Engineering Specification**.
+
+**THE GOLDEN RULE**: 
+- **WRITE PYTHONIC PSEUDO-CODE** in `core_logic_steps`.
+- Example: `s...
+2025-12-06 02:08:11 | INFO     | LLM_TRACE | --------------------------------------------------
+2025-12-06 02:10:49 | INFO     | LLM_TRACE | ======== [RESPONSE] ========
+2025-12-06 02:10:49 | INFO     | LLM_TRACE | CONTENT HEAD:
+```json
+{
+  "project_name": "PHYSICAL",
+  "architecture_style": "Physics-Informed State Space Model for Multivariate Time Series",
+  "requirements": ["torch", "numpy", "scipy", "einops"],
+  "hyperpara...
+2025-12-06 02:10:49 | INFO     | LLM_TRACE | ============================================================
+
+2025-12-06 02:10:49 | INFO     | LLM_TRACE | ======== [REQUEST] Model: DeepSeek-V3.2-Exp ========
+2025-12-06 02:10:49 | INFO     | LLM_TRACE | URL: https://llmapi.paratera.com/v1
+2025-12-06 02:10:49 | INFO     | LLM_TRACE | PROMPT HEAD:
+You are the infamous **"Reviewer #2"** for a top-tier CS conference (e.g., CVPR, NeurIPS, S&P).
+You are skeptical, critical, and hard to please. You assume the submission is flawed until proven otherw...
+2025-12-06 02:10:49 | INFO     | LLM_TRACE | --------------------------------------------------
+2025-12-06 02:11:01 | INFO     | LLM_TRACE | ======== [RESPONSE] ========
+2025-12-06 02:11:01 | INFO     | LLM_TRACE | CONTENT HEAD:
+{
+  "decision": "REVISE",
+  "score": 4,
+  "critique": "The code architecture shows promising modularity with separated components, but suffers from critical flaws. First, the config system is inadequa...
+2025-12-06 02:11:01 | INFO     | LLM_TRACE | ============================================================
+
+2025-12-06 02:11:01 | INFO     | LLM_TRACE | ======== [REQUEST] Model: DeepSeek-V3.2-Exp ========
+2025-12-06 02:11:01 | INFO     | LLM_TRACE | URL: https://llmapi.paratera.com/v1
+2025-12-06 02:11:01 | INFO     | LLM_TRACE | PROMPT HEAD:
+You are a Principal Software Architect. 
+Your goal is to produce a **Low-Level Engineering Specification**.
+
+**THE GOLDEN RULE**: 
+- **WRITE PYTHONIC PSEUDO-CODE** in `core_logic_steps`.
+- Example: `s...
+2025-12-06 02:11:01 | INFO     | LLM_TRACE | --------------------------------------------------
+2025-12-06 02:14:29 | INFO     | LLM_TRACE | ======== [RESPONSE] ========
+2025-12-06 02:14:29 | INFO     | LLM_TRACE | CONTENT HEAD:
+```json
+{
+  "project_name": "PHYSICAL",
+  "architecture_style": "Physics-Informed State Space Model for Multivariate Time Series",
+  "requirements": ["torch", "numpy", "scipy", "einops", "pyyaml", "pa...
+2025-12-06 02:14:29 | INFO     | LLM_TRACE | ============================================================
+
+2025-12-06 02:14:29 | INFO     | LLM_TRACE | ======== [REQUEST] Model: DeepSeek-V3.2-Exp ========
+2025-12-06 02:14:29 | INFO     | LLM_TRACE | URL: https://llmapi.paratera.com/v1
+2025-12-06 02:14:29 | INFO     | LLM_TRACE | PROMPT HEAD:
+You are the infamous **"Reviewer #2"** for a top-tier CS conference (e.g., CVPR, NeurIPS, S&P).
+You are skeptical, critical, and hard to please. You assume the submission is flawed until proven otherw...
+2025-12-06 02:14:29 | INFO     | LLM_TRACE | --------------------------------------------------
+2025-12-06 02:14:40 | INFO     | LLM_TRACE | ======== [RESPONSE] ========
+2025-12-06 02:14:40 | INFO     | LLM_TRACE | CONTENT HEAD:
+{
+  "decision": "REVISE",
+  "score": 5,
+  "critique": "The system architecture shows good modularity with separated components (Data/Model/Train) and a config system, but has critical flaws. First, th...
+2025-12-06 02:14:40 | INFO     | LLM_TRACE | ============================================================
+
+2025-12-06 02:18:49 | INFO     | LLM_TRACE | ======== [REQUEST] Model: DeepSeek-V3.2-Exp ========
+2025-12-06 02:18:49 | INFO     | LLM_TRACE | URL: https://llmapi.paratera.com/v1
+2025-12-06 02:18:49 | INFO     | LLM_TRACE | PROMPT HEAD:
+You are a Distinguished Computer Science Professor.
+Your goal is to develop a **NOVEL** theoretical framework based on the user's idea.
+
+**CRITICAL WARNING - ANTI-PLAGIARISM**:
+- The "Related Work" pr...
+2025-12-06 02:18:49 | INFO     | LLM_TRACE | --------------------------------------------------
+2025-12-06 02:19:23 | INFO     | LLM_TRACE | ======== [RESPONSE] ========
+2025-12-06 02:19:23 | INFO     | LLM_TRACE | CONTENT HEAD:
+```json
+{
+  "research_field": "Multivariate Weather Forecasting with Physics-Informed Deep Learning",
+  "problem_formulation": "Given a multivariate weather time series $\\mathbf{X} = \\{\\mathbf{x}_1...
+2025-12-06 02:19:23 | INFO     | LLM_TRACE | ============================================================
+
+2025-12-06 02:19:23 | INFO     | LLM_TRACE | ======== [REQUEST] Model: DeepSeek-V3.2-Exp ========
+2025-12-06 02:19:23 | INFO     | LLM_TRACE | URL: https://llmapi.paratera.com/v1
+2025-12-06 02:19:23 | INFO     | LLM_TRACE | PROMPT HEAD:
+You are a Distinguished Computer Science Professor.
+Your goal is to develop a **NOVEL** theoretical framework based on the user's idea.
+
+**CRITICAL WARNING - ANTI-PLAGIARISM**:
+- The "Related Work" pr...
+2025-12-06 02:19:23 | INFO     | LLM_TRACE | --------------------------------------------------
+2025-12-06 02:19:23 | INFO     | LLM_TRACE | ======== [RESPONSE] ========
+2025-12-06 02:19:23 | INFO     | LLM_TRACE | CONTENT HEAD:
+```json
+{
+  "research_field": "Multivariate Weather Forecasting with Physics-Informed Deep Learning",
+  "problem_formulation": "Given a multivariate weather time series $\\mathbf{X} = \\{\\mathbf{x}_1...
+2025-12-06 02:19:23 | INFO     | LLM_TRACE | ============================================================
+
+2025-12-06 02:19:23 | INFO     | LLM_TRACE | ======== [REQUEST] Model: DeepSeek-V3.2-Exp ========
+2025-12-06 02:19:23 | INFO     | LLM_TRACE | URL: https://llmapi.paratera.com/v1
+2025-12-06 02:19:23 | INFO     | LLM_TRACE | PROMPT HEAD:
+You are the infamous **"Reviewer #2"** for a top-tier CS conference (e.g., CVPR, NeurIPS, S&P).
+You are skeptical, critical, and hard to please. You assume the submission is flawed until proven otherw...
+2025-12-06 02:19:23 | INFO     | LLM_TRACE | --------------------------------------------------
+2025-12-06 02:19:39 | INFO     | LLM_TRACE | ======== [RESPONSE] ========
+2025-12-06 02:19:39 | INFO     | LLM_TRACE | CONTENT HEAD:
+{
+  "decision": "REVISE",
+  "score": 5,
+  "critique": "The theoretical framework presents an interesting intuition but suffers from critical flaws in rigor and completeness. Firstly, while LaTeX equat...
+2025-12-06 02:19:39 | INFO     | LLM_TRACE | ============================================================
+
+2025-12-06 02:19:39 | INFO     | LLM_TRACE | ======== [REQUEST] Model: DeepSeek-V3.2-Exp ========
+2025-12-06 02:19:39 | INFO     | LLM_TRACE | URL: https://llmapi.paratera.com/v1
+2025-12-06 02:19:39 | INFO     | LLM_TRACE | PROMPT HEAD:
+You are a Distinguished Computer Science Professor.
+Your goal is to develop a **NOVEL** theoretical framework based on the user's idea.
+
+**CRITICAL WARNING - ANTI-PLAGIARISM**:
+- The "Related Work" pr...
+2025-12-06 02:19:39 | INFO     | LLM_TRACE | --------------------------------------------------
+2025-12-06 02:19:39 | INFO     | LLM_TRACE | ======== [RESPONSE] ========
+2025-12-06 02:19:39 | INFO     | LLM_TRACE | CONTENT HEAD:
+```json
+{
+  "research_field": "Multivariate Weather Forecasting with Physics-Informed Deep Learning",
+  "problem_formulation": "Given a multivariate weather time series $\\mathbf{X} = \\{\\mathbf{x}_1...
+2025-12-06 02:19:39 | INFO     | LLM_TRACE | ============================================================
+
+2025-12-06 02:19:39 | INFO     | LLM_TRACE | ======== [REQUEST] Model: DeepSeek-V3.2-Exp ========
+2025-12-06 02:19:39 | INFO     | LLM_TRACE | URL: https://llmapi.paratera.com/v1
+2025-12-06 02:19:39 | INFO     | LLM_TRACE | PROMPT HEAD:
+You are a Distinguished Computer Science Professor.
+Your goal is to develop a **NOVEL** theoretical framework based on the user's idea.
+
+**CRITICAL WARNING - ANTI-PLAGIARISM**:
+- The "Related Work" pr...
+2025-12-06 02:19:39 | INFO     | LLM_TRACE | --------------------------------------------------
+2025-12-06 02:19:39 | INFO     | LLM_TRACE | ======== [RESPONSE] ========
+2025-12-06 02:19:39 | INFO     | LLM_TRACE | CONTENT HEAD:
+```json
+{
+  "research_field": "Multivariate Weather Forecasting with Physics-Informed Deep Learning",
+  "problem_formulation": "Given a multivariate weather time series $\\mathbf{X} = \\{\\mathbf{x}_1...
+2025-12-06 02:19:39 | INFO     | LLM_TRACE | ============================================================
+
+2025-12-06 02:19:39 | INFO     | LLM_TRACE | ======== [REQUEST] Model: DeepSeek-V3.2-Exp ========
+2025-12-06 02:19:39 | INFO     | LLM_TRACE | URL: https://llmapi.paratera.com/v1
+2025-12-06 02:19:39 | INFO     | LLM_TRACE | PROMPT HEAD:
+You are the infamous **"Reviewer #2"** for a top-tier CS conference (e.g., CVPR, NeurIPS, S&P).
+You are skeptical, critical, and hard to please. You assume the submission is flawed until proven otherw...
+2025-12-06 02:19:39 | INFO     | LLM_TRACE | --------------------------------------------------
+2025-12-06 02:19:52 | INFO     | LLM_TRACE | ======== [RESPONSE] ========
+2025-12-06 02:19:52 | INFO     | LLM_TRACE | CONTENT HEAD:
+{
+  "decision": "REVISE",
+  "score": 6,
+  "critique": "The theoretical framework presents good intuition by identifying a genuine limitation of standard Mamba models in non-stationary weather systems ...
+2025-12-06 02:19:52 | INFO     | LLM_TRACE | ============================================================
+
+2025-12-06 02:19:52 | INFO     | LLM_TRACE | ======== [REQUEST] Model: DeepSeek-V3.2-Exp ========
+2025-12-06 02:19:52 | INFO     | LLM_TRACE | URL: https://llmapi.paratera.com/v1
+2025-12-06 02:19:52 | INFO     | LLM_TRACE | PROMPT HEAD:
+You are a Distinguished Computer Science Professor.
+Your goal is to develop a **NOVEL** theoretical framework based on the user's idea.
+
+**CRITICAL WARNING - ANTI-PLAGIARISM**:
+- The "Related Work" pr...
+2025-12-06 02:19:52 | INFO     | LLM_TRACE | --------------------------------------------------
+2025-12-06 02:19:52 | INFO     | LLM_TRACE | ======== [RESPONSE] ========
+2025-12-06 02:19:52 | INFO     | LLM_TRACE | CONTENT HEAD:
+```json
+{
+  "research_field": "Multivariate Weather Forecasting with Physics-Informed Deep Learning",
+  "problem_formulation": "Given a multivariate weather time series $\\mathbf{X} = \\{\\mathbf{x}_1...
+2025-12-06 02:19:52 | INFO     | LLM_TRACE | ============================================================
+
+2025-12-06 02:19:52 | INFO     | LLM_TRACE | ======== [REQUEST] Model: DeepSeek-V3.2-Exp ========
+2025-12-06 02:19:52 | INFO     | LLM_TRACE | URL: https://llmapi.paratera.com/v1
+2025-12-06 02:19:52 | INFO     | LLM_TRACE | PROMPT HEAD:
+You are a Distinguished Computer Science Professor.
+Your goal is to develop a **NOVEL** theoretical framework based on the user's idea.
+
+**CRITICAL WARNING - ANTI-PLAGIARISM**:
+- The "Related Work" pr...
+2025-12-06 02:19:52 | INFO     | LLM_TRACE | --------------------------------------------------
+2025-12-06 02:19:53 | INFO     | LLM_TRACE | ======== [RESPONSE] ========
+2025-12-06 02:19:53 | INFO     | LLM_TRACE | CONTENT HEAD:
+```json
+{
+  "research_field": "Multivariate Weather Forecasting with Physics-Informed Deep Learning",
+  "problem_formulation": "Given a multivariate weather time series $\\mathbf{X} = \\{\\mathbf{x}_1...
+2025-12-06 02:19:53 | INFO     | LLM_TRACE | ============================================================
+
+2025-12-06 02:19:53 | INFO     | LLM_TRACE | ======== [REQUEST] Model: DeepSeek-V3.2-Exp ========
+2025-12-06 02:19:53 | INFO     | LLM_TRACE | URL: https://llmapi.paratera.com/v1
+2025-12-06 02:19:53 | INFO     | LLM_TRACE | PROMPT HEAD:
+You are the infamous **"Reviewer #2"** for a top-tier CS conference (e.g., CVPR, NeurIPS, S&P).
+You are skeptical, critical, and hard to please. You assume the submission is flawed until proven otherw...
+2025-12-06 02:19:53 | INFO     | LLM_TRACE | --------------------------------------------------
+2025-12-06 02:19:53 | INFO     | LLM_TRACE | ======== [RESPONSE] ========
+2025-12-06 02:19:53 | INFO     | LLM_TRACE | CONTENT HEAD:
+{
+  "decision": "REVISE",
+  "score": 6,
+  "critique": "The theoretical framework presents good intuition by identifying a genuine limitation of standard Mamba models in non-stationary weather systems ...
+2025-12-06 02:19:53 | INFO     | LLM_TRACE | ============================================================
+
+2025-12-06 02:19:53 | INFO     | LLM_TRACE | ======== [REQUEST] Model: DeepSeek-V3.2-Exp ========
+2025-12-06 02:19:53 | INFO     | LLM_TRACE | URL: https://llmapi.paratera.com/v1
+2025-12-06 02:19:53 | INFO     | LLM_TRACE | PROMPT HEAD:
+You are a Principal Software Architect. 
+Your goal is to produce a **Low-Level Engineering Specification**.
+
+**THE GOLDEN RULE**: 
+- **WRITE PYTHONIC PSEUDO-CODE** in `core_logic_steps`.
+
+**JSON FORMA...
+2025-12-06 02:19:53 | INFO     | LLM_TRACE | --------------------------------------------------
+2025-12-06 02:22:05 | INFO     | LLM_TRACE | ======== [RESPONSE] ========
+2025-12-06 02:22:05 | INFO     | LLM_TRACE | CONTENT HEAD:
+```json
+{
+  "project_name": "PhysMamba",
+  "architecture_style": "Physics-Constrained State Space Model for Weather Forecasting",
+  "requirements": ["torch>=2.0", "numpy", "scipy"],
+  "hyperparameters...
+2025-12-06 02:22:05 | INFO     | LLM_TRACE | ============================================================
+
+2025-12-06 02:22:05 | INFO     | LLM_TRACE | ======== [REQUEST] Model: DeepSeek-V3.2-Exp ========
+2025-12-06 02:22:05 | INFO     | LLM_TRACE | URL: https://llmapi.paratera.com/v1
+2025-12-06 02:22:05 | INFO     | LLM_TRACE | PROMPT HEAD:
+You are the infamous **"Reviewer #2"** for a top-tier CS conference (e.g., CVPR, NeurIPS, S&P).
+You are skeptical, critical, and hard to please. You assume the submission is flawed until proven otherw...
+2025-12-06 02:22:05 | INFO     | LLM_TRACE | --------------------------------------------------
+2025-12-06 02:22:16 | INFO     | LLM_TRACE | ======== [RESPONSE] ========
+2025-12-06 02:22:16 | INFO     | LLM_TRACE | CONTENT HEAD:
+{
+  "decision": "REVISE",
+  "score": 5,
+  "critique": "The architecture shows good modular separation but suffers from critical flaws. First, the config system is inadequate - hyperparameters are hard...
+2025-12-06 02:22:16 | INFO     | LLM_TRACE | ============================================================
+
+2025-12-06 02:22:16 | INFO     | LLM_TRACE | ======== [REQUEST] Model: DeepSeek-V3.2-Exp ========
+2025-12-06 02:22:16 | INFO     | LLM_TRACE | URL: https://llmapi.paratera.com/v1
+2025-12-06 02:22:16 | INFO     | LLM_TRACE | PROMPT HEAD:
+You are a Principal Software Architect. 
+Your goal is to produce a **Low-Level Engineering Specification**.
+
+**THE GOLDEN RULE**: 
+- **WRITE PYTHONIC PSEUDO-CODE** in `core_logic_steps`.
+
+**JSON FORMA...
+2025-12-06 02:22:16 | INFO     | LLM_TRACE | --------------------------------------------------
+2025-12-06 02:25:47 | INFO     | LLM_TRACE | ======== [RESPONSE] ========
+2025-12-06 02:25:47 | INFO     | LLM_TRACE | CONTENT HEAD:
+```json
+{
+  "project_name": "PhysMamba",
+  "architecture_style": "Physics-Constrained State Space Model for Weather Forecasting",
+  "requirements": [
+    "torch>=2.0",
+    "numpy",
+    "scipy",
+    "p...
+2025-12-06 02:25:47 | INFO     | LLM_TRACE | ============================================================
+
+2025-12-06 02:25:47 | INFO     | LLM_TRACE | ======== [REQUEST] Model: DeepSeek-V3.2-Exp ========
+2025-12-06 02:25:47 | INFO     | LLM_TRACE | URL: https://llmapi.paratera.com/v1
+2025-12-06 02:25:47 | INFO     | LLM_TRACE | PROMPT HEAD:
+You are the infamous **"Reviewer #2"** for a top-tier CS conference (e.g., CVPR, NeurIPS, S&P).
+You are skeptical, critical, and hard to please. You assume the submission is flawed until proven otherw...
+2025-12-06 02:25:47 | INFO     | LLM_TRACE | --------------------------------------------------
+2025-12-06 02:25:56 | INFO     | LLM_TRACE | ======== [RESPONSE] ========
+2025-12-06 02:25:56 | INFO     | LLM_TRACE | CONTENT HEAD:
+{
+  "decision": "REVISE",
+  "score": 6,
+  "critique": "The architecture demonstrates good modularity with separated components and proper configuration management, but suffers from critical theoretica...
+2025-12-06 02:25:56 | INFO     | LLM_TRACE | ============================================================
+

@@ -1,0 +1,30 @@
+# 🧠 理论框架审查: {{ phase_name }}
+
+## 1. 研究领域 (Field)
+`{{ framework.research_field }}`
+
+## 2. 问题定义 (Problem Formulation)
+> 这里是问题的形式化定义（支持 LaTeX）：
+
+{{ framework.problem_formulation }}
+
+## 3. 核心方法 (Proposed Methodology)
+{{ framework.proposed_methodology }}
+
+## 4. 理论分析 (Analysis & Proofs)
+{{ framework.theoretical_analysis }}
+
+## 5. 关键创新点 (Innovations)
+{% for item in framework.key_innovations -%}
+- {{ item }}
+{% endfor %}
+
+---
+<!-- SYSTEM SEPARATOR -->
+
+# 🟢 用户决策区
+
+**决策 (Action)**: [ APPROVE ] 
+
+**反馈意见 (Feedback)**:
+<!-- 比如：公式推导有点问题，或者请增加对隐私安全性的讨论 -->

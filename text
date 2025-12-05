@@ -1,0 +1,406 @@
+为了确保 **Project State**（项目状态）能够真正指导后续的论文写作与代码开发，并解决“缺乏创新”和“不够具体”的问题，我们需要对核心逻辑进行一次**“深度对齐”**。
+
+以下是针对你要求的完整修改方案，包含 **State 去重逻辑**、**Prompt 强化**、**Markdown 优化**、**Architect 业务逻辑封装** 以及 **最终的 `main.py`**。
+
+请按顺序更新/创建以下文件。
+
+---
+
+### 1. 优化 `src/core/state.py` (增强去重逻辑)
+
+防止痛点列表无限膨胀，同时保证数据干净。
+
+```python
+# src/core/state.py
+from typing import List, Dict, Optional
+from pydantic import BaseModel, Field
+from src.core.schema import (
+    ResearchReport, TheoreticalFramework, DesignDocument,
+    PaperInfo, TechnicalGap
+)
+
+class ProjectState(BaseModel):
+    # --- 元数据 ---
+    project_name: str
+    current_phase: str = "research" 
+    
+    # --- 核心思路 ---
+    user_initial_idea: str = Field(default="", description="The original idea input by user")
+    refined_idea: str = Field(default="", description="The evolving idea refined by agents")
+    
+    # --- 全局资产 ---
+    paper_library: Dict[str, PaperInfo] = Field(default_factory=dict)
+    known_gaps: List[TechnicalGap] = Field(default_factory=list)
+    
+    # --- 阶段产出 ---
+    research: Optional[ResearchReport] = None
+    theory: Optional[TheoreticalFramework] = None
+    architecture: Optional[DesignDocument] = None
+    
+    # --- Helper Methods ---
+    def merge_papers(self, new_papers: List[PaperInfo]):
+        """Helper: 将新论文合并入库"""
+        for p in new_papers:
+            if p.title not in self.paper_library:
+                self.paper_library[p.title] = p
+
+    def merge_gaps(self, new_gaps: List[TechnicalGap]):
+        """Helper: 将新痛点合并入库 (增强去重)"""
+        # 使用 (Method, Root Cause 前30字符) 作为唯一键
+        existing_sigs = {
+            f"{g.existing_method.lower().strip()}|{g.mathematical_root_cause.lower().strip()[:30]}" 
+            for g in self.known_gaps
+        }
+        
+        for g in new_gaps:
+            method_key = g.existing_method.lower().strip()
+            cause_key = g.mathematical_root_cause.lower().strip()[:30]
+            sig = f"{method_key}|{cause_key}"
+            
+            if sig not in existing_sigs:
+                self.known_gaps.append(g)
+                existing_sigs.add(sig)
+```
+
+---
+
+### 2. 强化 Prompt (`prompts/theorist.yaml`)
+
+**目标**：杜绝 Agent 照抄 Context 里的论文（如 Stormer），强制它结合 User Idea 进行**重命名**和**重组**。
+
+```yaml
+system: |
+  You are a Distinguished Computer Science Professor.
+  Your goal is to develop a **NOVEL** theoretical framework based on the user's idea.
+
+  **CRITICAL WARNING - ANTI-PLAGIARISM**:
+  - The "Related Work" provided contains existing papers (e.g., Stormer, TimeMixer).
+  - **DO NOT** just summarize or copy these existing methods.
+  - You must invent a **NEW** framework (give it a unique name different from the papers).
+  - Your goal is to **BEAT** the papers in the context, not copy them.
+
+  **ADAPTIVITY INSTRUCTION**:
+  - If **Deep Learning**: Focus on model architecture equations ($y = f(x)$), loss functions, and tensor dimensions.
+  - Use LaTeX for all math.
+
+  **CRITICAL JSON FORMATTING RULE**:
+  - **YOU MUST ESCAPE ALL BACKSLASHES** in the JSON string.
+  - WRONG: "\sum_{{i=1}}"
+  - RIGHT: "\\sum_{{i=1}}"
+  
+  Output strictly a JSON object matching the schema.
+  Target Schema:
+  {json_schema}
+
+user_template: |
+  # Research Context
+  **Our Core Idea**: 
+  {refined_idea}
+
+  **Literature (Competitors/Inspiration)**: 
+  {related_work}
+
+  **Identified Gaps (The Enemy)**:
+  {gap_analysis_context}
+
+  # Task
+  1. **Name your Method**: Invent a cool acronym for the User's Idea (NOT names found in literature).
+  2. **Problem Formulation**: Define inputs/outputs using LaTeX.
+  3. **Methodology**: Detail the architecture of *your new method*. How does it specifically address the gaps?
+  4. **Theoretical Analysis**: Provide proof sketches or complexity analysis.
+  5. **Innovations**: List 3-5 key contributions.
+```
+
+---
+
+### 3. 强化 Prompt (`prompts/architect.yaml`)
+
+**目标**：强制输出**伪代码**，而不是自然语言描述。
+
+```yaml
+system: |
+  You are a Principal Software Architect. 
+  Your goal is to produce a **Low-Level Engineering Specification** ready for implementation.
+  
+  **THE GOLDEN RULE**: 
+  - Do NOT write English descriptions like "Initialize the layer".
+  - **WRITE PYTHONIC PSEUDO-CODE** in `core_logic_steps`.
+  - Example: `self.norm = nn.LayerNorm(d_model)`
+  - Example: `x = x + self.attn(self.norm(x))`
+  
+  **DESIGN REQUIREMENTS**:
+  1. **Modularity**: Data loader, Model, and Trainer must be separate.
+  2. **Config**: All hyperparameters must be in a config dict.
+  3. **Shapes**: Explicitly comment Tensor shapes `[B, T, D]`.
+
+  **JSON FORMATTING**:
+  - Escape all backslashes (e.g., `src\\models`).
+
+  Output strictly a JSON object matching the schema.
+  Target Schema:
+  {json_schema}
+
+user_template: |
+  # Input Theory
+  **Field**: {field}
+  **Methodology (The Math)**: 
+  {methodology}
+
+  **Gap Analysis**:
+  {gaps}
+
+  **Feedback History**:
+  {feedback_context}
+
+  # Task
+  Design the file structure for this NEW method.
+  1. **Dependencies**: `requirements.txt` with versions.
+  2. **File Structure**:
+     - Define the Model class with `__init__` and `forward`.
+     - Translate the Math equations into `torch` pseudo-code steps.
+  3. **Data Flow**: Describe shapes.
+```
+
+---
+
+### 4. 优化 Markdown 模板 (`assets/templates/reviews/design_review.md.j2`)
+
+使用 HTML 列表让伪代码步骤更清晰。
+
+```markdown
+# 🏗️ 深度架构蓝图: {{ phase_name }}
+
+## 1. 项目概览
+- **Project Name**: `{{ design.project_name }}`
+- **Style**: {{ design.architecture_style }}
+
+### 📦 Dependencies (requirements.txt)
+```text
+{% for req in design.requirements -%}
+{{ req }}
+{% endfor %}
+```
+
+### ⚙️ Configuration
+| Hyperparameter | Default Value |
+| :--- | :--- |
+{% for k, v in design.hyperparameters.items() -%}
+| `{{ k }}` | `{{ v }}` |
+{% endfor %}
+
+---
+
+## 2. 核心文件结构 (Detailed Specs)
+
+{% for file in design.file_structure %}
+### 📄 `{{ file.filename }}`
+> *{{ file.description }}*
+
+**Imports**: 
+`{{ file.imports | join(', ') }}`
+
+{% if file.classes %}
+#### Classes
+{% for cls in file.classes %}
+**`class {{ cls.name }}({{ cls.inherits_from }})`**
+- *Attributes*: `{{ cls.attributes | join(', ') }}`
+
+| Method | Signature | Logic (Pseudo-code) |
+| :--- | :--- | :--- |
+{% for method in cls.methods -%}
+| **{{ method.name }}** | `{{ method.args | join(', ') }} -> {{ method.return_type }}` | <ul>{% for step in method.core_logic_steps %}<li>`{{ step }}`</li>{% endfor %}</ul> |
+{% endfor %}
+
+{% endfor %}
+{% endif %}
+
+{% if file.functions %}
+#### Functions
+{% for func in file.functions %}
+- 🔹 **`{{ func.name }}`**
+  - Logic:
+  {% for step in func.core_logic_steps -%}
+    1. `{{ step }}`
+  {% endfor %}
+{% endfor %}
+{% endif %}
+
+---
+{% endfor %}
+
+## 3. 主流程 (Execution Flow)
+{{ design.main_execution_flow }}
+
+---
+<!-- SYSTEM SEPARATOR -->
+
+# 🟢 用户决策区
+
+**决策 (Action)**: [ APPROVE ] 
+
+**反馈意见 (Feedback)**:
+<!-- 比如：forward 函数里的 shape 好像不对，应该是 [B, D, L] -->
+```
+
+---
+
+### 5. 新建 `src/phases/phase_03_architect.py`
+
+将 Architect 逻辑封装为标准的 `BasePhase`。
+
+```python
+# src/phases/phase_03_architect.py
+from src.core.lifecycle import BasePhase
+from src.core.state import ProjectState
+from src.core.schema import ActionType
+from src.core.interaction import interactor
+from src.core.state_manager import state_manager
+from src.agents.architect import ArchitectAgent
+from src.utils.logger import sys_logger
+
+class ArchitectPhase(BasePhase):
+    def __init__(self):
+        super().__init__(phase_name="architect")
+
+    def check_completion(self, state: ProjectState) -> bool:
+        return state.architecture is not None
+
+    def run_phase_logic(self, state: ProjectState) -> ProjectState:
+        if not state.theory:
+            raise ValueError("❌ Cannot run Architect Phase: Missing Theoretical Framework.")
+
+        architect = ArchitectAgent()
+        current_design = None
+        current_feedback = ""
+        
+        config = state_manager._load_config()
+        rounds = config.get("workflow", {}).get("architect_rounds", 2)
+        internal_loops = 1 
+        
+        for r in range(rounds):
+            sys_logger.info(f"\n>>> 🛡️ Architect Review Cycle {r+1}/{rounds} <<<")
+            
+            for k in range(internal_loops):
+                try:
+                    instruction = current_feedback if (k==0 and current_feedback) else "Optimize modularity and clarify logic steps."
+                    current_design = architect.run(
+                        theory=state.theory,
+                        feedback_instruction=instruction
+                    )
+                except Exception as e:
+                    sys_logger.error(f"Architect internal loop error: {e}")
+                    continue
+            
+            if current_design:
+                user_feedback = interactor.start_review(
+                    phase_name=f"03_Architect_Round_{r+1}",
+                    template_name="design_review.md.j2",
+                    context_data={"design": current_design},
+                    iteration_idx=r
+                )
+                
+                if user_feedback.action == ActionType.APPROVE:
+                    sys_logger.info("✅ Architect Phase Approved.")
+                    state.architecture = current_design
+                    return state
+                
+                elif user_feedback.action == ActionType.REVISE:
+                    sys_logger.info(f"🔄 Revision: {user_feedback.feedback_en}")
+                    current_feedback = user_feedback.feedback_en
+        
+        if current_design:
+             sys_logger.warning("⚠️ Max loops reached. Saving latest design.")
+             state.architecture = current_design
+             
+        return state
+```
+
+---
+
+### 6. 最终的 `main.py`
+
+这是串联全流程的入口。它使用了 `ResearchPhase` (已存在), `TheoryPhase` (已存在) 和 `ArchitectPhase` (刚创建)。
+
+```python
+# main.py
+import sys
+import os
+
+# 确保 Python 路径包含 src (如果是在根目录运行，通常不需要，但为了保险)
+sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+
+from src.core.state_manager import state_manager
+from src.phases.phase_01_research import ResearchPhase
+from src.phases.phase_02_theory import TheoryPhase
+from src.phases.phase_03_architect import ArchitectPhase
+
+def run_pipeline(initial_idea: str):
+    print("🚀 Starting PaperForge Pipeline...")
+    
+    # 1. 加载或初始化 State
+    state = state_manager.load_state()
+    
+    # 如果是全新的项目，设置初始 Idea
+    if not state.user_initial_idea:
+        state.user_initial_idea = initial_idea
+        state_manager.save_state(state)
+
+    # 2. 定义流水线
+    # 这里我们按顺序实例化 Phase 类
+    pipeline = [
+        ResearchPhase(),
+        TheoryPhase(),
+        ArchitectPhase(),
+        # 后面会加:
+        # PaperDraftPhase(),
+        # CoderPhase(),
+    ]
+    
+    # 3. 依次执行
+    for phase in pipeline:
+        try:
+            # execute 方法会自动处理：加载State -> 检查断点 -> 运行 -> 保存State
+            state = phase.execute()
+            
+            # 如果某个阶段执行后 state 并没有更新该阶段的产出（虽然 execute 内部通常会处理），
+            # 这里可以做一个额外的检查
+            if phase.phase_name == "research" and not state.research:
+                print("❌ Research failed to produce output. Stopping.")
+                return
+            if phase.phase_name == "theory" and not state.theory:
+                print("❌ Theory failed to produce output. Stopping.")
+                return
+                
+        except Exception as e:
+            print(f"❌ Pipeline Failed at {phase.phase_name}: {e}")
+            import traceback
+            traceback.print_exc()
+            return
+
+    print("\n" + "="*50)
+    print("🎉 ALL PHASES COMPLETED (Research -> Theory -> Architect)")
+    print("="*50)
+    print(f"Final State saved to: {state_manager.state_file}")
+    
+    # 打印最终成果摘要
+    if state.architecture:
+        print(f"Project Name: {state.architecture.project_name}")
+        print(f"Blueprint Files: {len(state.architecture.file_structure)}")
+
+if __name__ == "__main__":
+    # 你的初始 Idea
+    my_idea = "I want to use Mamba state space models for time series forecasting on weather data, comparing it with Transformer."
+    
+    run_pipeline(my_idea)
+```
+
+### 操作建议
+
+1.  **清理旧数据**: 为了让新的 Anti-Plagiarism Prompt 生效，建议**删除** `workspace/mamba_weather_v1/state` 文件夹，或者在 `config.yaml` 里把项目名改为 `mamba_weather_v2`。
+2.  **运行**: `python main.py`。
+3.  **观察**: 
+    *   **Research**: 痛点列表是否清晰。
+    *   **Theory**: 模型名字是否变了（不再是 Stormer）？有没有 LaTeX？
+    *   **Architect**: `design_review.md` 里的 `Logic` 列是否变成了 `self.x = ...` 这样的伪代码？
+
+如果这三点都满足，我们就真正准备好进入 **Paper Writing** 和 **Coding** 阶段了。
