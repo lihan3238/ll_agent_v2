@@ -1,2 +1,4 @@
 .env
 workspace/
+logs/
+test.md
