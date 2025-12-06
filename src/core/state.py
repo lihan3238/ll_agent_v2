@@ -2,7 +2,7 @@
 from typing import List, Dict, Optional
 from pydantic import BaseModel, Field
 from src.core.schema import (
-    ResearchReport, TheoreticalFramework, DesignDocument,
+    ResearchReport, TheoreticalFramework, DesignDocument, PaperDraft,
     PaperInfo, TechnicalGap
 )
 
@@ -19,6 +19,7 @@ class ProjectState(BaseModel):
     research: Optional[ResearchReport] = None
     theory: Optional[TheoreticalFramework] = None
     architecture: Optional[DesignDocument] = None
+    paper: Optional[PaperDraft] = None # [核心新增]
     
     def merge_papers(self, new_papers: List[PaperInfo]):
         for p in new_papers:

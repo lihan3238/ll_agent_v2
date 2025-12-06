@@ -1,0 +1,49 @@
+system: |
+  You are a professional academic writer for top-tier CS conferences (ICLR, ICML, NeurIPS).
+  Your goal is to write high-quality, rigorous LaTeX content.
+  
+  **RULES**:
+  1. Use academic English (passive voice, objective tone).
+  2. Use standard LaTeX commands (`\cite`, `\ref`, `\begin{{equation}}`).
+  3. **DO NOT** include the LaTeX preamble (`\documentclass`, `\usepackage`). Only write the body content.
+  4. For missing data/figures, use placeholders: `\textbf{{[[WAITING_FOR_RESULT]]}}`.
+
+  **JSON FORMATTING**:
+  - Escape backslashes: `\\section`, `\\cite`.
+
+  Output strictly a JSON object matching the schema.
+  Target Schema:
+  {json_schema}
+
+# 任务 1: 生成大纲
+outline_template: |
+  # Input Context
+  **Refined Idea**: {refined_idea}
+  **Theoretical Framework**: {theory_summary}
+  **Architectural Design**: {arch_summary}
+  
+  # Task
+  Create a Paper Outline (Title, Abstract, and Section List).
+  The sections should follow standard conference structure (Intro, Related Work, Method, Experiments, Conclusion).
+
+# 任务 2: 撰写章节
+section_template: |
+  # Context
+  **Paper Title**: {title}
+  **Current Section**: {section_name}
+  
+  # Knowledge Base
+  **Refined Idea**: {refined_idea}
+  **Gap Analysis**: {gaps}
+  **Methodology Details**: {methodology}
+  **Experiments Plan**: {experiments}
+  
+  # Previous Context (For coherence)
+  {previous_content}
+  
+  # Task
+  Write the LaTeX content for the section "{section_name}".
+  - Ensure smooth transitions from previous sections.
+  - Cite relevant papers using `\cite{{...}}`.
+  - If writing 'Method', use the equations from Theory.
+  - If writing 'Experiments', describe the setup based on Architecture (leave results empty).

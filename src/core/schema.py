@@ -84,6 +84,28 @@ class DesignDocument(BaseModel):
     hyperparameters: Dict[str, str]
     main_execution_flow: str
 
+# --- Phase 4: Paper Writer Outputs ---
+
+class SectionContent(BaseModel):
+    section_name: str = Field(..., description="e.g., 'Introduction', 'Methodology'")
+    latex_content: str = Field(..., description="Raw LaTeX content for this section. NO preamble, NO \\begin{document}.")
+    word_count: int = Field(..., description="Approximate word count.")
+
+class PaperOutline(BaseModel):
+    """先规划，后写作"""
+    title: str
+    abstract: str
+    section_names: List[str] = Field(..., description="Ordered list of section titles to be written.")
+
+class PaperDraft(BaseModel):
+    title: str
+    abstract: str
+    sections: List[SectionContent] = Field(..., description="Ordered list of completed sections.")
+    bibliography_content: str = Field(..., description="Content of the .bib file.")
+    
+    # 状态标记，方便后续 Refine
+    is_complete: bool = False
+
 # reviewer
 
 class ReviewDecision(str, Enum):

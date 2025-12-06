@@ -16,15 +16,21 @@ agents:
     max_context_papers: 5         # 最终给 LLM 看几篇最相关的 (防止上下文溢出)
     timeout: 15                   # API 超时时间
 
-  translator:
-    model: "DeepSeek-V3.2-Exp" # 翻译需要稍微好一点的模型理解语意，DeepSeek 也可以
-    temperature: 0.1
-    max_tokens: 8192
-
   theorist:
     model: "DeepSeek-V3.2-Exp" # 聪明，负责逻辑推理
     temperature: 0.7
     max_tokens: 8192 # [覆盖] 允许输出更多内容
+
+  architect:
+    model: "DeepSeek-V3.2-Exp"
+    temperature: 0.5
+    max_tokens: 8192 # [覆盖] 允许输出更多内容
+
+  # [新增] 论文写手
+  paper_writer:
+    model: "DeepSeek-V3.2-Exp" # 写作用 V3 足够，速度快
+    temperature: 0.4       # 稍低温度，保证学术规范
+    max_tokens: 32768      # 写长文需要大窗口
 
   # [新增] 评审专家
   reviewer:
@@ -33,10 +39,10 @@ agents:
     max_retries: 3
     max_tokens: 4196 # [覆盖] 够写评语就行，省钱
 
-  architect:
-    model: "DeepSeek-V3.2-Exp"
-    temperature: 0.5
-    max_tokens: 8192 # [覆盖] 允许输出更多内容
+  translator:
+    model: "DeepSeek-V3.2-Exp" # 翻译需要稍微好一点的模型理解语意，DeepSeek 也可以
+    temperature: 0.1
+    max_tokens: 8192
 
 project:
   # [决定权在你]: 这里填什么，就会生成 workspace/mamba_weather_v3/ 文件夹
@@ -47,11 +53,15 @@ project:
   # [新增] 用户偏好语言 (用于生成 Markdown 里的提示语，但不影响内核)
   user_language: "zh"
 
+  latex_template: "blank_icml_latex" #
+
 workflow:
   # 每个阶段的 Review 轮次 (大循环)
   research_rounds: 3
   theory_rounds: 3
   architect_rounds: 2
-  
+  paper_rounds: 2
+
+
   # 每次 Review 前 Agent 自己闷头跑几轮 (小循环)
   internal_loops: 2
