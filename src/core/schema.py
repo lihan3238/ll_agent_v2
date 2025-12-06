@@ -98,12 +98,15 @@ class PaperOutline(BaseModel):
     section_names: List[str] = Field(..., description="Ordered list of section titles to be written.")
 
 class PaperDraft(BaseModel):
+    # [新增] 显式保存大纲结构
+    outline: PaperOutline 
+    
     title: str
     abstract: str
     sections: List[SectionContent] = Field(..., description="Ordered list of completed sections.")
     bibliography_content: str = Field(..., description="Content of the .bib file.")
     
-    # 状态标记，方便后续 Refine
+    # 状态标记，方便后续 Refine    
     is_complete: bool = False
 
 # reviewer

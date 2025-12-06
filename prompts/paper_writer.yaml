@@ -47,6 +47,10 @@ section_template: |
   # Previous Context
   {previous_content}
   
+  # --- REVISION CONTEXT (If applicable) ---
+  {revision_context}
+  # ----------------------------------------
+
   # Task
   Write the LaTeX content for the section "{section_name}".
   

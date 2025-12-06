@@ -26,8 +26,12 @@ class PaperWriterAgent(BaseAgent):
                       theory: TheoreticalFramework, 
                       architect: DesignDocument,
                       previous_content: str = "",
-                      references_context: str = "") -> SectionContent: # [新增参数]
-        
+                      references_context: str = "",
+                      # [新增] 修改模式参数
+                      existing_text: str = "", 
+                      feedback: str = "") -> SectionContent:
+        mode = "REWRITING" if feedback else "WRITING"
+
         sys_logger.info(f"Writing Section: {section_name}...")
         
         full_prompt = self.prompts["system"] + "\n\n" + self.prompts["section_template"]
@@ -39,15 +43,31 @@ class PaperWriterAgent(BaseAgent):
         # 这里为了连贯性，传入上一节的完整内容（如果 token 允许）
         context_window = previous_content[-3000:] if len(previous_content) > 3000 else previous_content
         
+        # 构造 Revision Context
+        revision_context = ""
+        if feedback and existing_text:
+            revision_context = f"""
+            **EXISTING DRAFT for this section**:
+            {existing_text}
+            
+            **REVIEWER FEEDBACK**:
+            {feedback}
+            
+            **INSTRUCTION**: Rewrite the existing draft to address the feedback. Improve clarity and academic tone.
+            """
+        else:
+            revision_context = "(Writing from scratch based on Outline)"
+
         return self.call_llm_with_struct(
             prompt_template=full_prompt,
             schema=SectionContent,
-            title=research.refined_idea, # 暂用 Idea 当标题上下文
+            title=research.refined_idea,
             section_name=section_name,
             refined_idea=research.refined_idea,
             gaps=gaps_str,
             methodology=theory.proposed_methodology,
             experiments=architect.hyperparameters,
             previous_content=context_window,
-            references_context=references_context # [传入]
+            references_context=references_context,
+            revision_context=revision_context # [注入]
         )
