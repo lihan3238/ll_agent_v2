@@ -9,7 +9,7 @@ class ArchitectAgent(BaseAgent):
 
     def run(self, theory: TheoreticalFramework, 
             feedback_instruction: str = "",
-            previous_design: DesignDocument = None) -> DesignDocument: # [新增参数]
+            previous_design: DesignDocument = None) -> DesignDocument:
         
         sys_logger.info(f"Task Started: Architecting solution for {theory.research_field}...")
         
@@ -24,16 +24,18 @@ class ArchitectAgent(BaseAgent):
             The previous design was reviewed.
             Feedback: "{feedback_instruction}"
             
-            Action: Fix the issues in the Previous Draft. Do NOT change parts that are already good.
+            Action: Fix the issues in the Previous Draft. 
+            **CRITICAL INSTRUCTION**: You must regenerate the ENTIRE JSON object. Do not output only the changed parts. Copy the unchanged parts from the Previous Draft if necessary.
             """
         else:
             feedback_context = "No previous feedback. Initial design."
 
-        # [核心修复] 注入上一轮的设计草稿
+        # 注入上一轮的设计草稿
         if previous_design:
-            # 将复杂的对象转为精简的 JSON 字符串供 LLM 参考
-            # 为了节省 token，我们可以只提取文件结构部分，或者全量
-            prev_json = previous_design.model_dump_json(indent=2, exclude={'main_execution_flow'})
+            # exclude={'main_execution_flow'} 可能会导致 LLM 忘记生成这个字段，
+            # 既然我们要全量输出，最好把全量参考给它，或者只 exclude 极少部分
+            # 这里改为全量 dump，让 LLM 方便抄作业
+            prev_json = previous_design.model_dump_json(indent=2)
             
             feedback_context += f"""
             

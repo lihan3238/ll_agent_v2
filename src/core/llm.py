@@ -6,7 +6,7 @@ from src.utils.logger import llm_logger
 
 load_dotenv()
 
-def call_llm(prompt: str, model: str, base_url: str = None, temperature: float = 0.7) -> str:
+def call_llm(prompt: str, model: str, base_url: str = None, temperature: float = 0.7, max_tokens: int = 8192) -> str:
     """
     统一 LLM 接口，支持多厂商自动切换 Key
     """
@@ -15,23 +15,15 @@ def call_llm(prompt: str, model: str, base_url: str = None, temperature: float =
     
     api_key = None
     final_base_url = base_url
-
-    # --- 智能路由逻辑 ---
+    
     if "deepseek" in model.lower():
-        # 如果是 DeepSeek 模型，优先使用 DeepSeek 配置
-        if not final_base_url:
-            final_base_url = os.getenv("DEEPSEEK_BASE_URL")
+        if not final_base_url: final_base_url = os.getenv("DEEPSEEK_BASE_URL")
         api_key = os.getenv("DEEPSEEK_API_KEY")
     
-    # 默认兜底逻辑 (OpenAI)
-    if not final_base_url:
-        final_base_url = os.getenv("OPENAI_BASE_URL", "https://api.openai.com/v1")
+    if not final_base_url: final_base_url = os.getenv("OPENAI_BASE_URL", "https://api.openai.com/v1")
+    if not api_key: api_key = os.getenv("OPENAI_API_KEY")
     
-    if not api_key:
-        api_key = os.getenv("OPENAI_API_KEY")
-
-    if not api_key:
-        raise ValueError(f"Missing API Key for model {model}. Check .env file.")
+    if not api_key: raise ValueError(f"Missing API Key for model {model}")
 
     # ================= LOGGING START =================
     llm_logger.info(f"======== [REQUEST] Model: {model} ========")
@@ -43,11 +35,10 @@ def call_llm(prompt: str, model: str, base_url: str = None, temperature: float =
     client = OpenAI(base_url=final_base_url, api_key=api_key)
 
     try:
-        # DeepSeek R1 (reasoner) 不支持 temperature 参数 (或者是别名问题)
-        # 这里做一个简单的兼容性处理
         kwargs = {
             "model": model,
-            "messages": [{"role": "user", "content": prompt}]
+            "messages": [{"role": "user", "content": prompt}],
+            "max_tokens": max_tokens # [新增] 传入限制
         }
         
         # DeepSeek-reasoner (R1) 建议不要传 temperature 或者设为默认，

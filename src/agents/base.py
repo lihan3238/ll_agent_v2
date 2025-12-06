@@ -32,8 +32,12 @@ class BaseAgent(ABC, Generic[T]):
                 "model": agent_specific.get("model", global_llm.get("default_model")),
                 "base_url": agent_specific.get("base_url", global_llm.get("default_base_url")),
                 "temperature": agent_specific.get("temperature", 0.7),
+                
+                # [新增] 读取 max_tokens，优先级: Agent配置 > 全局默认 > 硬编码兜底(4096)
+                "max_tokens": agent_specific.get("max_tokens", global_llm.get("default_max_tokens", 4096)),
+                
                 # 传入其他自定义参数
-                **{k:v for k,v in agent_specific.items() if k not in ["model", "base_url", "temperature"]}
+                **{k:v for k,v in agent_specific.items() if k not in ["model", "base_url", "temperature", "max_tokens"]}
             }
             return merged
         except Exception as e:
@@ -74,7 +78,8 @@ class BaseAgent(ABC, Generic[T]):
                     prompt=prompt,
                     model=self.config["model"],
                     base_url=self.config["base_url"],
-                    temperature=self.config["temperature"]
+                    temperature=self.config["temperature"],
+                    max_tokens=self.config["max_tokens"] # [新增] 传入参数
                 )
                 
                 return self._parse_output(raw_resp, schema)

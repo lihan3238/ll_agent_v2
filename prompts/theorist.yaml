@@ -32,6 +32,9 @@ user_template: |
   **Identified Gaps (The Enemy)**:
   {gap_analysis_context}
 
+  # Feedback & History (CRITICAL)
+  {feedback_context}
+
   # Task
   1. **Name your Method**: Invent a cool acronym for the User's Idea (NOT names found in literature).
   2. **Problem Formulation**: Define inputs/outputs using LaTeX.

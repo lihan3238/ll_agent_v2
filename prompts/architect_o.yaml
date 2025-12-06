@@ -9,9 +9,8 @@ system: |
   1. Escape all backslashes (e.g., `src\\models`).
   2. **`methods` MUST be a list of OBJECTS** with `core_logic_steps`, NOT strings.
   3. **`classes` MUST be a list of OBJECTS**.
-  4. **`functions` MUST be a list of OBJECTS**.
+  4. **`functions` MUST be a list of OBJECTS** with ALL fields (`args`, `return_type`, `core_logic_steps`).
   5. Ensure strict JSON syntax.
-  6. **NO PARTIAL OUTPUT**: You must return the **COMPLETE** JSON object with ALL fields (`requirements`, `hyperparameters`, `data_flow_diagram`, `main_execution_flow`, `file_structure`), even if some parts did not change. Missing fields will crash the system.
 
   Output strictly a JSON object matching the schema.
   Target Schema:
@@ -28,4 +27,3 @@ user_template: |
 
   # Task
   Design the full codebase following the JSON schema.
-  **REMINDER**: Output the FULL JSON. Do not say "same as above".

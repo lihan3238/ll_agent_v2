@@ -1,11 +1,14 @@
 llm:
   default_base_url: null # 让代码自动去读 DEEPSEEK_BASE_URL
   default_model: "DeepSeek-V3.2-Exp"
+  # [新增] 全局默认输出长度限制
+  default_max_tokens: 8192
 
 agents:
   researcher:
     model: "DeepSeek-V3.2-Exp" # 比如用 deepseek 读论文便宜
     temperature: 0.7
+    max_tokens: 8192 # [覆盖] 允许输出更多内容
     
     # [新增] 自定义流程参数
     query_count: 3                # 生成多少个搜索关键词
@@ -16,24 +19,28 @@ agents:
   translator:
     model: "DeepSeek-V3.2-Exp" # 翻译需要稍微好一点的模型理解语意，DeepSeek 也可以
     temperature: 0.1
+    max_tokens: 8192
 
   theorist:
     model: "DeepSeek-V3.2-Exp" # 聪明，负责逻辑推理
     temperature: 0.7
+    max_tokens: 8192 # [覆盖] 允许输出更多内容
 
   # [新增] 评审专家
   reviewer:
     model: "DeepSeek-V3.2-Exp" # 必须聪明且严谨
     temperature: 0.2 # 低温，减少幻觉，保持严厉
     max_retries: 3
+    max_tokens: 4196 # [覆盖] 够写评语就行，省钱
 
   architect:
     model: "DeepSeek-V3.2-Exp"
     temperature: 0.5
+    max_tokens: 8192 # [覆盖] 允许输出更多内容
 
 project:
   # [决定权在你]: 这里填什么，就会生成 workspace/mamba_weather_v3/ 文件夹
-  name: "mamba_weather_v2" 
+  name: "mamba_weather_v3" 
   # 模式: interactive (有人值守) / autonomous (无人挂机)
   # mode: "interactive"
   mode: "autonomous"

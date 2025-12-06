@@ -44,14 +44,18 @@ report_gen_prompt: |
   3. Why is the User's Idea theoretically better?
   
   **Output Requirements**:
-  - `gap_analysis`: Fill this list with specific technical flaws of existing works (e.g., "Mamba's selection mechanism assumes LTI system, which fails in dynamic context X"). Each item must include `existing_method`, `limitation_description`, and `mathematical_root_cause`.
-  - `refined_idea`: Rewrite the user's idea using formal academic terminology, explicitly stating how it solves the identified gaps.
-  - `keywords`: Provide 5-7 high-signal keywords or phrases that best describe the improved idea.
-  - `related_work_summary`: Write 2-3 dense paragraphs that synthesize the strongest papers and how they motivate the gap.
-  - `top_papers`: Return the top 5 most relevant papers from the provided context. Each list entry must include `title`, `year`, `citations`, `summary`, and `url` derived from the search context (do not invent data).
-  - `implementation_suggestions`: Provide concrete next steps or ablation ideas the architect/coder could execute.
+  - `gap_analysis`: Fill this list with specific technical flaws of existing works.
+  - `refined_idea`: Rewrite the user's idea using formal academic terminology.
+  - `keywords`: Provide 5-7 high-signal keywords.
+  - `related_work_summary`: Synthesize the strongest papers.
+  - `top_papers`: Return the top 5 most relevant papers.
+  - `implementation_suggestions`: Provide concrete next steps.
 
-  Return only a JSON object shaped exactly like `{{ "refined_idea": "...", "keywords": [...], "gap_analysis": [...], "related_work_summary": "...", "top_papers": [...], "implementation_suggestions": "..." }}`. Do **NOT** repeat or quote the schema definition.
+  **JSON FORMATTING RULES**:
+  1. **`gap_analysis` items MUST be objects** with ALL fields (`existing_method`, `limitation_description`, `mathematical_root_cause`).
+  2. **`top_papers` items MUST be objects** with ALL fields (`title`, `year`, `citations`, `summary`, `url`).
+  3. Do NOT invent fake citations.
+  4. Ensure strict JSON syntax.
 
   Output strictly a JSON object matching the schema.
   Target Schema:
