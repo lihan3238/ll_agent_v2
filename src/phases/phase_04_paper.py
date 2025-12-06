@@ -22,6 +22,29 @@ class PaperPhase(BasePhase):
             raise ValueError("❌ Missing pre-requisites (Research/Theory/Architect).")
 
         writer = PaperWriterAgent()
+
+                # ====================================================
+        # Step 0: 预生成 Citation Keys 和 Context (修复引用失败的核心)
+        # ====================================================
+        sys_logger.info(">>> Step 0: Pre-calculating Citation Keys...")
+        
+        bib_entries = []
+        citation_map_str = "Available Papers for Citation:\n"
+        
+        for p in state.paper_library.values():
+            # 1. 生成唯一的 Key: FirstWord + Year (e.g., "Learning2021")
+            # 移除非字母字符，确保 LaTeX 安全
+            first_word = "".join(filter(str.isalpha, p.title.split()[0]))
+            key = f"{first_word}{p.year}"
+            
+            # 2. 构建 .bib 条目
+            entry = f"@article{{{key},\n  title={{{p.title}}},\n  author={{{' and '.join(p.title.split()[:2])}}},\n  year={{{p.year}}},\n  url={{{p.url}}}\n}}"
+            bib_entries.append(entry)
+            
+            # 3. 构建给 LLM 看的“小抄”
+            citation_map_str += f"- Key: \\cite{{{key}}} | Title: {p.title} ({p.year})\n"
+
+        full_bib_content = "\n\n".join(bib_entries)
         
         # 1. 生成大纲
         sys_logger.info(">>> Step 1: Generating Outline...")
@@ -40,7 +63,8 @@ class PaperPhase(BasePhase):
                 research=state.research,
                 theory=state.theory,
                 architect=state.architecture,
-                previous_content=accumulated_text
+                previous_content=accumulated_text,
+                references_context=citation_map_str # [新增] 传入引用映射表
             )
             
             completed_sections.append(section_content)
@@ -62,7 +86,7 @@ class PaperPhase(BasePhase):
             title=outline.title,
             abstract=outline.abstract,
             sections=completed_sections,
-            bibliography_content=bib_content,
+            bibliography_content=full_bib_content, # 使用预生成的 Bib 内容
             is_complete=True
         )
         

@@ -6,7 +6,8 @@ system: |
   1. Use academic English (passive voice, objective tone).
   2. Use standard LaTeX commands (`\cite`, `\ref`, `\begin{{equation}}`).
   3. **DO NOT** include the LaTeX preamble (`\documentclass`, `\usepackage`). Only write the body content.
-  4. For missing data/figures, use placeholders: `\textbf{{[[WAITING_FOR_RESULT]]}}`.
+  4. **CRITICAL**: For missing data/figures, use **LaTeX-safe** placeholders: `\textbf{{[[WAITING-FOR-RESULT]]}}`. 
+     - **Use HYPHENS (-), NOT underscores (_).** Underscores will break the compilation.
 
   **JSON FORMATTING**:
   - Escape backslashes: `\\section`, `\\cite`.
@@ -15,7 +16,7 @@ system: |
   Target Schema:
   {json_schema}
 
-# 任务 1: 生成大纲
+# 任务 1: 生成大纲 (保持不变)
 outline_template: |
   # Input Context
   **Refined Idea**: {refined_idea}
@@ -24,9 +25,11 @@ outline_template: |
   
   # Task
   Create a Paper Outline (Title, Abstract, and Section List).
-  The sections should follow standard conference structure (Intro, Related Work, Method, Experiments, Conclusion).
+  The sections should follow standard conference structure. 
+  **Standard Structure**: Introduction, Related Work, Method, Experiments, Conclusion.
+  (Do not split Conclusion and Future Work unless necessary).
 
-# 任务 2: 撰写章节
+# 任务 2: 撰写章节 (核心修改)
 section_template: |
   # Context
   **Paper Title**: {title}
@@ -38,12 +41,17 @@ section_template: |
   **Methodology Details**: {methodology}
   **Experiments Plan**: {experiments}
   
-  # Previous Context (For coherence)
+  # Available References (CRITICAL: Only use these keys)
+  {references_context}
+  
+  # Previous Context
   {previous_content}
   
   # Task
   Write the LaTeX content for the section "{section_name}".
-  - Ensure smooth transitions from previous sections.
-  - Cite relevant papers using `\cite{{...}}`.
-  - If writing 'Method', use the equations from Theory.
-  - If writing 'Experiments', describe the setup based on Architecture (leave results empty).
+  
+  **CRITICAL FORMATTING RULES**:
+  1. **DO NOT write the section header** (e.g., do NOT write `\section{{...}}` or `\subsection{{...}}` at the start). The system adds this automatically.
+  2. **Start directly with the paragraph text**.
+  3. You MAY use `\subsection{{...}}` if you need *subsections* within this section, but never the main section title itself.
+  4. Use `\cite{{...}}` with the provided keys.

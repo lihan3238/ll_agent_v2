@@ -25,7 +25,8 @@ class PaperWriterAgent(BaseAgent):
                       research: ResearchReport, 
                       theory: TheoreticalFramework, 
                       architect: DesignDocument,
-                      previous_content: str = "") -> SectionContent:
+                      previous_content: str = "",
+                      references_context: str = "") -> SectionContent: # [新增参数]
         
         sys_logger.info(f"Writing Section: {section_name}...")
         
@@ -47,5 +48,6 @@ class PaperWriterAgent(BaseAgent):
             gaps=gaps_str,
             methodology=theory.proposed_methodology,
             experiments=architect.hyperparameters,
-            previous_content=context_window
+            previous_content=context_window,
+            references_context=references_context # [传入]
         )

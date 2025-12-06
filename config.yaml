@@ -24,13 +24,13 @@ agents:
   architect:
     model: "DeepSeek-V3.2-Exp"
     temperature: 0.5
-    max_tokens: 8192 # [覆盖] 允许输出更多内容
+    max_tokens: 16384 # [覆盖] 允许输出更多内容
 
   # [新增] 论文写手
   paper_writer:
     model: "DeepSeek-V3.2-Exp" # 写作用 V3 足够，速度快
     temperature: 0.4       # 稍低温度，保证学术规范
-    max_tokens: 32768      # 写长文需要大窗口
+    max_tokens: 65536      # 写长文需要大窗口
 
   # [新增] 评审专家
   reviewer:
@@ -46,7 +46,9 @@ agents:
 
 project:
   # [决定权在你]: 这里填什么，就会生成 workspace/mamba_weather_v3/ 文件夹
-  name: "mamba_weather_v3" 
+  # name: "mamba_weather_v3" 
+  # name: "ai_for_building_energy_consumption_forecasting_v0" 
+  name: "Towards_Public_Verifiable_Encrypted_Search_by_Using_Blockchain_and_CBF_v0"
   # 模式: interactive (有人值守) / autonomous (无人挂机)
   # mode: "interactive"
   mode: "autonomous"
