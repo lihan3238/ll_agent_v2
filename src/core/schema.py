@@ -1,6 +1,6 @@
 # src/core/schema.py
 from pydantic import BaseModel, Field
-from typing import List, Optional, Dict
+from typing import List, Optional, Dict, Union, Any
 from enum import Enum
 
 # --- 基础枚举 ---
@@ -52,7 +52,7 @@ class UserFeedback(BaseModel):
 # --- [新增] Phase 3: Architect Outputs ---
 class MethodSpec(BaseModel):
     name: str = Field(..., description="Method name, e.g., 'forward'")
-    args: List[str] = Field(..., description="Arguments with type hints, e.g., ['x: torch.Tensor', 'state: Optional[Tensor] = None']")
+    args: List[Union[str, Dict[str, Any]]] = Field(..., description="Arguments with type hints. Can be strings (e.g., 'x: int') or detailed objects (e.g., {'name': 'x', 'type': 'int'}).")
     return_type: str = Field(..., description="Return type, e.g., 'torch.Tensor'")
     docstring: str = Field(..., description="Brief explanation of what this method does.")
     # [核心新增]：核心逻辑描述，指导 Coder 写代码体
@@ -109,6 +109,31 @@ class PaperDraft(BaseModel):
     # 状态标记，方便后续 Refine    
     is_complete: bool = False
 
+# --- Phase 5: Coder Outputs ---
+
+class ExecutionStatus(str, Enum):
+    SUCCESS = "SUCCESS"
+    FAILED = "FAILED"
+
+class CodeExecutionLog(BaseModel):
+    command: str
+    return_code: int
+    stdout: str
+    stderr: str
+    error_analysis: Optional[str] = None # LLM 对报错的分析
+
+class ExperimentResults(BaseModel):
+    """最终的实验结果，用于填补论文"""
+    metrics: Dict[str, float] = Field(..., description="Key metrics like Accuracy, MSE, Time.")
+    figures: List[str] = Field(default=[], description="Paths to generated plots (png/pdf).")
+    status: ExecutionStatus
+
+class CoderOutput(BaseModel):
+    # Coder 最终不仅产出代码文件，还产出运行结果
+    # 代码文件实际上存在 disk 上，这里只记录元数据
+    environment_yaml: str = Field(..., description="Content of environment.yaml")
+    execution_log: List[CodeExecutionLog]
+    results: Optional[ExperimentResults]
 # reviewer
 
 class ReviewDecision(str, Enum):

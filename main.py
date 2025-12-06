@@ -9,6 +9,7 @@ from src.phases.phase_01_research import ResearchPhase
 from src.phases.phase_02_theory import TheoryPhase
 from src.phases.phase_03_architect import ArchitectPhase
 from src.phases.phase_04_paper import PaperPhase
+from src.phases.phase_05_coder import CoderPhase # [新增]
 # [新增] 引入编译工具
 from src.tools.latex_compiler import latex_compiler 
 
@@ -26,7 +27,8 @@ def run_pipeline(initial_idea: str):
         ResearchPhase(),
         TheoryPhase(),
         ArchitectPhase(),
-        PaperPhase()
+        PaperPhase(),
+        CoderPhase() # [新增]
     ]
     
     # 3. 执行循环

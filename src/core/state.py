@@ -3,7 +3,7 @@ from typing import List, Dict, Optional
 from pydantic import BaseModel, Field
 from src.core.schema import (
     ResearchReport, TheoreticalFramework, DesignDocument, PaperDraft,
-    PaperInfo, TechnicalGap
+    PaperInfo, TechnicalGap, CoderOutput # [新增]
 )
 
 class ProjectState(BaseModel):
@@ -16,10 +16,12 @@ class ProjectState(BaseModel):
     paper_library: Dict[str, PaperInfo] = Field(default_factory=dict)
     known_gaps: List[TechnicalGap] = Field(default_factory=list)
     
+    # --- 阶段产出 ---
     research: Optional[ResearchReport] = None
     theory: Optional[TheoreticalFramework] = None
     architecture: Optional[DesignDocument] = None
-    paper: Optional[PaperDraft] = None # [核心新增]
+    paper: Optional[PaperDraft] = None
+    coder: Optional[CoderOutput] = None # [新增] Coder 产出
     
     def merge_papers(self, new_papers: List[PaperInfo]):
         for p in new_papers:

@@ -32,6 +32,12 @@ agents:
     temperature: 0.4       # 稍低温度，保证学术规范
     max_tokens: 65536      # 写长文需要大窗口
 
+  # [新增] 程序员
+  coder:
+    model: "DeepSeek-V3.2-Exp" # 写代码 V3 性价比最高，R1 也可以
+    temperature: 0.2           # 代码生成需要低温度，严谨
+    max_tokens: 65536
+
   # [新增] 评审专家
   reviewer:
     model: "DeepSeek-V3.2-Exp" # 必须聪明且严谨
@@ -48,7 +54,7 @@ project:
   # [决定权在你]: 这里填什么，就会生成 workspace/mamba_weather_v3/ 文件夹
   # name: "mamba_weather_v3" 
   # name: "ai_for_building_energy_consumption_forecasting_v0" 
-  name: "Towards_Public_Verifiable_Encrypted_Search_by_Using_Blockchain_and_CBF_v0"
+  name: "Towards_Public_Verifiable_Encrypted_Search_by_Using_Blockchain_and_CBF_v1"
   # 模式: interactive (有人值守) / autonomous (无人挂机)
   # mode: "interactive"
   mode: "autonomous"
@@ -67,3 +73,24 @@ workflow:
 
   # 每次 Review 前 Agent 自己闷头跑几轮 (小循环)
   internal_loops: 2
+
+# [新增] 运行环境硬性约束 (Coder 会读取这个来生成 environment.yaml)
+execution_env:
+  os_platform: "linux" # WSL2 属于 Linux 环境
+  python_version: "3.11" # 推荐 3.11，性能更好
+  
+  # 硬件信息 (提示 LLM 生成正确的 CUDA 依赖)
+  hardware_context: "NVIDIA RTX 5070 Ti (48GB RAM total system memory), CUDA Driver Version: 13.0"
+  
+  # 强制依赖 (Base libs)
+  base_requirements:
+    - "numpy"
+    - "pandas"
+    - "matplotlib"
+    - "scikit-learn"
+    # 强制 PyTorch 使用新版以兼容 50 系显卡和 CUDA 12.x/13.x
+    # 注意：Conda 安装命令通常需要指定 index-url 或 channel，这里写包名，LLM 会处理具体命令
+    - "pytorch>=2.4.0" 
+    - "torchvision"
+    - "torchaudio"
+    - "pytorch-cuda>=12.4" # 确保不安装 cpu 版本

@@ -1,0 +1,47 @@
+system: |
+  You are an Elite AI Research Engineer.
+  Your goal is to implement a complete, runnable codebase based on an Architect's Design Doc.
+  
+  **RULES**:
+  1. **Strict Adherence**: Follow the file structure and class definitions in the Design Doc exactly.
+  2. **Self-Contained**: The code must run. Handle imports correctly (`from src.models import ...`).
+  3. **Metrics Protocol**: The `main.py` MUST save final metrics to `results.json` in the current directory.
+     - Format: `{"accuracy": 0.95, "loss": 0.12, ...}`
+  4. **Environment**: Create a valid `environment.yaml` for Conda.
+
+  **JSON FORMATTING**:
+  - `files` must be a list of objects: `{"filename": "...", "content": "..."}`.
+  - Python code inside JSON must be properly escaped (e.g., `\n`, `\"`).
+
+  Output strictly a JSON object matching the schema.
+  Target Schema:
+  {json_schema}
+
+# 任务 1: 生成代码
+gen_code_template: |
+  # Architecture Blueprint
+  {design_doc}
+  
+  # Execution Environment Constraints
+  {env_config}
+  
+  # Task
+  Generate the full implementation code.
+  1. `environment.yaml`: Ensure it includes `{base_requirements}` and supports `{hardware_context}`.
+  2. All python files defined in Blueprint.
+  3. `main.py` entrypoint.
+
+# 任务 2: 修复 Bug
+fix_bug_template: |
+  # Context
+  I tried to run the code, but it failed.
+  
+  **Error Log (stderr)**:
+  {error_log}
+  
+  **Original Code Context**:
+  {file_content}
+  
+  # Task
+  Analyze the error and provide the FIXED file content.
+  Return **ONLY** the file(s) that need changes. Do not return unchanged files.
