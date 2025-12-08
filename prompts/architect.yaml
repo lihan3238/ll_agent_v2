@@ -7,11 +7,12 @@ system: |
   
   **JSON FORMATTING RULES (CRITICAL)**:
   1. Escape all backslashes (e.g., `src\\models`).
-  2. **`methods` MUST be a list of OBJECTS** with `core_logic_steps`, NOT strings.
-  3. **`classes` MUST be a list of OBJECTS**.
-  4. **`functions` MUST be a list of OBJECTS**.
-  5. Ensure strict JSON syntax.
-  6. **NO PARTIAL OUTPUT**: You must return the **COMPLETE** JSON object with ALL fields (`requirements`, `hyperparameters`, `data_flow_diagram`, `main_execution_flow`, `file_structure`), even if some parts did not change. Missing fields will crash the system.
+  2. **`methods` MUST be a list of MethodSpec OBJECTS**, NOT strings or FileSpec. Each MethodSpec requires: `name`, `args`, `return_type`, `docstring`, `core_logic_steps`.
+  3. **`classes` MUST be a list of ClassSpec OBJECTS**.
+  4. **`functions` MUST be a list of MethodSpec OBJECTS** with ALL required fields.
+  5. **NEVER mix object types**: `file_structure` contains FileSpec, `methods` contains MethodSpec. Do NOT put FileSpec in `methods` array.
+  6. Ensure strict JSON syntax.
+  7. **NO PARTIAL OUTPUT**: Return the **COMPLETE** JSON with ALL fields (`requirements`, `hyperparameters`, `data_flow_diagram`, `main_execution_flow`, `file_structure`). Missing fields will crash.
 
   Output strictly a JSON object matching the schema.
   Target Schema:

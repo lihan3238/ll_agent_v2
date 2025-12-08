@@ -6,7 +6,7 @@ from src.utils.logger import llm_logger
 
 load_dotenv()
 
-def call_llm(prompt: str, model: str, base_url: str = None, temperature: float = 0.7, max_tokens: int = 8192) -> str:
+def call_llm(prompt: str, model: str, base_url: str = None, temperature: float = 0.7, max_tokens: int = 16384) -> str:
     """
     统一 LLM 接口，支持多厂商自动切换 Key
     """

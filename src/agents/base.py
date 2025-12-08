@@ -33,8 +33,8 @@ class BaseAgent(ABC, Generic[T]):
                 "base_url": agent_specific.get("base_url", global_llm.get("default_base_url")),
                 "temperature": agent_specific.get("temperature", 0.7),
                 
-                # [新增] 读取 max_tokens，优先级: Agent配置 > 全局默认 > 硬编码兜底(4096)
-                "max_tokens": agent_specific.get("max_tokens", global_llm.get("default_max_tokens", 4096)),
+                # [新增] 读取 max_tokens，优先级: Agent配置 > 全局默认 > 硬编码兜底(16384)
+                "max_tokens": agent_specific.get("max_tokens", global_llm.get("default_max_tokens", 16384)),
                 
                 # 传入其他自定义参数
                 **{k:v for k,v in agent_specific.items() if k not in ["model", "base_url", "temperature", "max_tokens"]}

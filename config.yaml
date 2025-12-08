@@ -2,7 +2,7 @@ llm:
   default_base_url: null # 让代码自动去读 DEEPSEEK_BASE_URL
   default_model: "DeepSeek-V3.2-Exp"
   # [新增] 全局默认输出长度限制
-  default_max_tokens: 8192
+  default_max_tokens: 16384
 
 agents:
   researcher:
@@ -90,7 +90,7 @@ execution_env:
     - "scikit-learn"
     # 强制 PyTorch 使用新版以兼容 50 系显卡和 CUDA 12.x/13.x
     # 注意：Conda 安装命令通常需要指定 index-url 或 channel，这里写包名，LLM 会处理具体命令
-    - "pytorch>=2.4.0" 
+    - "pytorch>=2.9.0" 
     - "torchvision"
     - "torchaudio"
-    - "pytorch-cuda>=12.4" # 确保不安装 cpu 版本
+    - "pytorch-cuda>=12.8" # 确保不安装 cpu 版本

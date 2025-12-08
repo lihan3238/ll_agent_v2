@@ -43,8 +43,8 @@ class CoderPhase(BasePhase):
         if env_yaml:
             success = conda.create_env(env_yaml)
             if not success:
-                sys_logger.error("Failed to create Conda environment.")
-                # 这里可以选择退出，或者尝试继续（万一环境本身没问题）
+                sys_logger.error("Failed to create Conda environment. Aborting Coder Phase.")
+                raise RuntimeError("Conda environment creation failed. Check logs for details.")
         else:
             sys_logger.warning("No environment.yaml found! Code generation might be incomplete.")
 

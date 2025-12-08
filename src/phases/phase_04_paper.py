@@ -17,7 +17,7 @@ class PaperPhase(BasePhase):
     def check_completion(self, state: ProjectState) -> bool:
         # 如果已经有 paper 且 is_complete，视为完成
         # 但如果是断点续传，我们可能想允许它是 draft 状态。这里暂定严格检查。
-        return state.paper is not None and state.paper.is_complete
+        return state.paper is not None
 
     def run_phase_logic(self, state: ProjectState) -> ProjectState:
         if not (state.research and state.theory and state.architecture):

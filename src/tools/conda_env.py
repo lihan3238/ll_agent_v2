@@ -16,14 +16,18 @@ class CondaManager:
 
     def create_env(self, env_yaml_content: str) -> bool:
         """根据 yaml 内容创建/更新环境"""
+        # 写入文件
         yaml_path = os.path.join(self.code_dir, "environment.yaml")
         with open(yaml_path, "w", encoding="utf-8") as f:
             f.write(env_yaml_content)
             
         sys_logger.info(f"🐍 Creating/Updating Conda env: {self.env_name}...")
         
-        # 使用 conda env update --prune 确保环境干净
-        cmd = ["conda", "env", "update", "-f", yaml_path, "-n", self.env_name, "--prune"]
+        # [核心修复] 获取绝对路径，防止 subprocess 的 cwd 导致路径重复叠加
+        abs_yaml_path = os.path.abspath(yaml_path)
+        
+        # 使用 conda env update --prune
+        cmd = ["conda", "env", "update", "-f", abs_yaml_path, "-n", self.env_name, "--prune"]
         
         return self._run_subprocess(cmd)
 
@@ -34,23 +38,23 @@ class CondaManager:
         """
         sys_logger.info(f"🏃 Running {script_name} in env {self.env_name}...")
         
-        # 使用 conda run -n {env} python {script}
-        # 这是最稳健的方式，不需要激活环境
+        # 使用 conda run
         cmd = ["conda", "run", "-n", self.env_name, "--no-capture-output", "python", script_name]
         
         return self._run_subprocess(cmd, capture_output=True)
 
     def _run_subprocess(self, cmd: list, capture_output=False) -> bool | tuple:
         try:
-            # 统一在 code 目录下运行，这样相对路径 (如 data/) 才是对的
+            # 统一在 code 目录下运行
+            # 这样 Python 代码内部的相对路径 (如 pd.read_csv('data.csv')) 才是正确的
             result = subprocess.run(
                 cmd,
                 cwd=self.code_dir,
-                text=True, # 自动解码为字符串
+                text=True, 
                 stdout=subprocess.PIPE if capture_output else None,
                 stderr=subprocess.PIPE if capture_output else None,
                 encoding='utf-8', 
-                errors='replace' # 防止编码错误 crash
+                errors='replace'
             )
             
             if capture_output:

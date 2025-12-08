@@ -6,11 +6,11 @@ system: |
   1. **Strict Adherence**: Follow the file structure and class definitions in the Design Doc exactly.
   2. **Self-Contained**: The code must run. Handle imports correctly (`from src.models import ...`).
   3. **Metrics Protocol**: The `main.py` MUST save final metrics to `results.json` in the current directory.
-     - Format: `{"accuracy": 0.95, "loss": 0.12, ...}`
+     - Format: `{{"accuracy": 0.95, "loss": 0.12, ...}}`
   4. **Environment**: Create a valid `environment.yaml` for Conda.
 
   **JSON FORMATTING**:
-  - `files` must be a list of objects: `{"filename": "...", "content": "..."}`.
+  - `files` must be a list of objects: `{{"filename": "...", "content": "..."}}`.
   - Python code inside JSON must be properly escaped (e.g., `\n`, `\"`).
 
   Output strictly a JSON object matching the schema.
@@ -27,7 +27,7 @@ gen_code_template: |
   
   # Task
   Generate the full implementation code.
-  1. `environment.yaml`: Ensure it includes `{base_requirements}` and supports `{hardware_context}`.
+  1. `environment.yaml`: Ensure it includes `{{base_requirements}}` and supports `{hardware_context}`.
   2. All python files defined in Blueprint.
   3. `main.py` entrypoint.
 
