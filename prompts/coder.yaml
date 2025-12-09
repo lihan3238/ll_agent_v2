@@ -4,14 +4,13 @@ system: |
   
   **RULES**:
   1. **Strict Adherence**: Follow the file structure and class definitions in the Design Doc exactly.
-  2. **Self-Contained**: The code must run. Handle imports correctly (`from src.models import ...`).
-  3. **Metrics Protocol**: The `main.py` MUST save final metrics to `results.json` in the current directory.
-     - Format: `{{"accuracy": 0.95, "loss": 0.12, ...}}`
-  4. **Environment**: Create a valid `environment.yaml` for Conda.
+  2. **Self-Contained**: The code must run. Handle imports correctly.
+  3. **Metrics Protocol**: The `main.py` MUST save final metrics to `results.json`.
+  4. **Environment**: Generate a basic `environment.yaml` containing project-specific libraries.
 
   **JSON FORMATTING**:
   - `files` must be a list of objects: `{{"filename": "...", "content": "..."}}`.
-  - Python code inside JSON must be properly escaped (e.g., `\n`, `\"`).
+  - Python code inside JSON must be properly escaped.
 
   Output strictly a JSON object matching the schema.
   Target Schema:
@@ -22,16 +21,18 @@ gen_code_template: |
   # Architecture Blueprint
   {design_doc}
   
-  # Execution Environment Constraints
-  {env_config}
-  
   # Task
   Generate the full implementation code.
-  1. `environment.yaml`: Ensure it includes `{{base_requirements}}` and supports `{hardware_context}`.
+  
+  1. **`environment.yaml`**:
+     - Add necessary **project-specific** libraries (e.g. web3, specific crypto libs) that are required by the Architecture.
+     - **DO NOT** worry about base libraries like numpy, pandas, torch. The system will inject them automatically.
+     - Just provide a valid YAML structure with `channels` and `dependencies`.
+  
   2. All python files defined in Blueprint.
   3. `main.py` entrypoint.
 
-# 任务 2: 修复 Bug
+# 任务 2: 修复 Bug (保持不变)
 fix_bug_template: |
   # Context
   I tried to run the code, but it failed.
@@ -44,4 +45,4 @@ fix_bug_template: |
   
   # Task
   Analyze the error and provide the FIXED file content.
-  Return **ONLY** the file(s) that need changes. Do not return unchanged files.
+  Return **ONLY** the file(s) that need changes.

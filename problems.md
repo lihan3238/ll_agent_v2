@@ -35,7 +35,8 @@
 - [ ] 21. architect 数据结构问题
 - [ ] 22. 模块检测 project_state.json 判断跳过逻辑优化（例如paper会记录多轮paper，不能检测到paper就跳）
 - [ ] 23. 相对路径，绝对路径安全问题
-- [ ] 24.coder不要一次性生成全部代码
+- [ ] 24. coder不要一次性生成全部代码
+- [ ] 25. fix是否能修复，输出每次conda中的所有命令
   
 
 1. Research 

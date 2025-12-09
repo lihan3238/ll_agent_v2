@@ -69,7 +69,7 @@ workflow:
   theory_rounds: 3
   architect_rounds: 2
   paper_rounds: 2
-
+  coder_retries: 5
 
   # 每次 Review 前 Agent 自己闷头跑几轮 (小循环)
   internal_loops: 2
@@ -84,13 +84,13 @@ execution_env:
   
   # 强制依赖 (Base libs)
   base_requirements:
-    - "numpy"
-    - "pandas"
-    - "matplotlib"
-    - "scikit-learn"
-    # 强制 PyTorch 使用新版以兼容 50 系显卡和 CUDA 12.x/13.x
-    # 注意：Conda 安装命令通常需要指定 index-url 或 channel，这里写包名，LLM 会处理具体命令
-    - "pytorch>=2.9.0" 
-    - "torchvision"
-    - "torchaudio"
-    - "pytorch-cuda>=12.8" # 确保不安装 cpu 版本
+    conda:
+      - "numpy"
+      - "pandas"
+      - "matplotlib"
+      - "scikit-learn"
+    pip:
+      - "--index-url https://download.pytorch.org/whl/cu130"
+      - "torch"
+      - "torchvision"
+      - "torchaudio"
