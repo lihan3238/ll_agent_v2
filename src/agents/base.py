@@ -62,11 +62,10 @@ class BaseAgent(ABC, Generic[T]):
         schema_json = json.dumps(schema.model_json_schema(), indent=2)
         kwargs["json_schema"] = schema_json
         
-        # 2. 渲染文本 [这里就是刚才报错的地方]
+        # 2. 渲染文本
         try:
             prompt = prompt_template.format(**kwargs)
         except KeyError as e:
-            # 如果 YAML 里没写双大括号，这里就会报错
             sys_logger.error(f"Prompt formatting error. Did you forget to escape {{}} in your YAML? Error key: {e}")
             raise ValueError(f"Prompt template missing variable: {e}")
 
@@ -79,7 +78,8 @@ class BaseAgent(ABC, Generic[T]):
                     model=self.config["model"],
                     base_url=self.config["base_url"],
                     temperature=self.config["temperature"],
-                    max_tokens=self.config["max_tokens"] # [新增] 传入参数
+                    max_tokens=self.config["max_tokens"],
+                    agent_name=self.role_name # [新增] 传入 Agent 名字
                 )
                 
                 return self._parse_output(raw_resp, schema)

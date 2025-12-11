@@ -134,6 +134,11 @@ class CoderOutput(BaseModel):
     environment_yaml: str = Field(..., description="Content of environment.yaml")
     execution_log: List[CodeExecutionLog]
     results: Optional[ExperimentResults]
+
+class EnvRequirements(BaseModel):
+    """LLM 分析出的额外依赖"""
+    additional_conda_packages: List[str] = Field(default=[], description="List of extra conda packages needed (e.g. ['tqdm', 'seaborn']).")
+    additional_pip_packages: List[str] = Field(default=[], description="List of extra pip packages needed (e.g. ['web3']).")
 # reviewer
 
 class ReviewDecision(str, Enum):

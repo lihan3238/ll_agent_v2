@@ -1,12 +1,12 @@
 llm:
   default_base_url: null # 让代码自动去读 DEEPSEEK_BASE_URL
-  default_model: "DeepSeek-V3.2-Exp"
+  default_model: "DeepSeek-V3.2"
   # [新增] 全局默认输出长度限制
   default_max_tokens: 16384
 
 agents:
   researcher:
-    model: "DeepSeek-V3.2-Exp" # 比如用 deepseek 读论文便宜
+    model: "DeepSeek-V3.2" # 比如用 deepseek 读论文便宜
     temperature: 0.7
     max_tokens: 8192 # [覆盖] 允许输出更多内容
     
@@ -17,36 +17,36 @@ agents:
     timeout: 15                   # API 超时时间
 
   theorist:
-    model: "DeepSeek-V3.2-Exp" # 聪明，负责逻辑推理
+    model: "DeepSeek-V3.2" # 聪明，负责逻辑推理
     temperature: 0.7
     max_tokens: 8192 # [覆盖] 允许输出更多内容
 
   architect:
-    model: "DeepSeek-V3.2-Exp"
+    model: "DeepSeek-V3.2"
     temperature: 0.5
     max_tokens: 16384 # [覆盖] 允许输出更多内容
 
   # [新增] 论文写手
   paper_writer:
-    model: "DeepSeek-V3.2-Exp" # 写作用 V3 足够，速度快
+    model: "DeepSeek-V3.2" # 写作用 V3 足够，速度快
     temperature: 0.4       # 稍低温度，保证学术规范
     max_tokens: 65536      # 写长文需要大窗口
 
   # [新增] 程序员
   coder:
-    model: "DeepSeek-V3.2-Exp" # 写代码 V3 性价比最高，R1 也可以
+    model: "DeepSeek-V3.2" # 写代码 V3 性价比最高，R1 也可以
     temperature: 0.2           # 代码生成需要低温度，严谨
     max_tokens: 65536
 
   # [新增] 评审专家
   reviewer:
-    model: "DeepSeek-V3.2-Exp" # 必须聪明且严谨
+    model: "DeepSeek-V3.2" # 必须聪明且严谨
     temperature: 0.2 # 低温，减少幻觉，保持严厉
     max_retries: 3
     max_tokens: 4196 # [覆盖] 够写评语就行，省钱
 
   translator:
-    model: "DeepSeek-V3.2-Exp" # 翻译需要稍微好一点的模型理解语意，DeepSeek 也可以
+    model: "DeepSeek-V3.2" # 翻译需要稍微好一点的模型理解语意，DeepSeek 也可以
     temperature: 0.1
     max_tokens: 8192
 
@@ -76,12 +76,10 @@ workflow:
 
 # [新增] 运行环境硬性约束 (Coder 会读取这个来生成 environment.yaml)
 execution_env:
-  os_platform: "linux" # WSL2 属于 Linux 环境
-  python_version: "3.11" # 推荐 3.11，性能更好
-  
+  os_platform: "linux"  
   # 硬件信息 (提示 LLM 生成正确的 CUDA 依赖)
-  hardware_context: "NVIDIA RTX 5070 Ti (48GB RAM total system memory), CUDA Driver Version: 13.0"
-  
+  experience_context: "wsl-ubuntu CUDA Driver Version: 13.0"
+  python_version: "3.11" # 推荐 3.11，性能更好
   # 强制依赖 (Base libs)
   base_requirements:
     conda:
@@ -90,7 +88,7 @@ execution_env:
       - "matplotlib"
       - "scikit-learn"
     pip:
-      - "--index-url https://download.pytorch.org/whl/cu130"
+      - "--extra-index-url https://download.pytorch.org/whl/cu130"
       - "torch"
       - "torchvision"
       - "torchaudio"

@@ -5,9 +5,10 @@ from typing import Dict
 from src.core.lifecycle import BasePhase
 from src.core.state import ProjectState
 from src.core.state_manager import state_manager
-from src.agents.coder import CoderAgent
+from src.agents.coder import CoderAgent, Codebase, CodeFile
 from src.tools.conda_env import CondaManager
-from src.core.schema import CoderOutput, CodeExecutionLog, ExperimentResults, ExecutionStatus
+from src.tools.code_utils import code_utils
+from src.core.schema import CodeExecutionLog, ExperimentResults, ExecutionStatus
 from src.utils.logger import sys_logger
 
 class CoderPhase(BasePhase):
@@ -15,149 +16,269 @@ class CoderPhase(BasePhase):
         super().__init__(phase_name="coder")
 
     def check_completion(self, state: ProjectState) -> bool:
-        # 如果有成功的运行结果，视为完成
         return state.coder is not None and state.coder.results and state.coder.results.status == ExecutionStatus.SUCCESS
 
     def run_phase_logic(self, state: ProjectState) -> ProjectState:
-        # 前置依赖检查
-        if not state.architecture:
-            raise ValueError("❌ Missing Architecture Design.")
-        if not state.paper:
-            raise ValueError("❌ Missing Paper Draft. Please complete Paper Phase first.")
-
-        # 1. 准备配置与工具
+        if not state.architecture: raise ValueError("❌ Missing Architecture.")
+        if not state.paper: raise ValueError("❌ Missing Paper Draft.")
+        
+        # 1. Setup
         config = state_manager._load_config()
         env_config = config.get("execution_env", {})
-        # 从 config 读取重试次数，默认 5 次
         max_retries = config.get("workflow", {}).get("coder_retries", 5)
         
         conda = CondaManager(state.project_name)
         coder = CoderAgent()
         
-        # 2. 生成初始代码
-        sys_logger.info(">>> Step 1: Generating Codebase...")
-        codebase = coder.generate_code(state.architecture, env_config)
+        # ====================================================
+        # Step 1: Smart Scaffolding (LLM 生成带注释骨架)
+        # ====================================================
+        sys_logger.info(">>> [Phase 5.1] Smart Scaffolding (LLM-driven)...")
         
-        # 写入硬盘
-        self._write_files(conda.code_dir, codebase.files)
+        initial_files = []
         
-        # 3. 创建/更新初始 Conda 环境
-        env_yaml_file = next((f for f in codebase.files if "environment.yaml" in f.filename or "environment.yml" in f.filename), None)
+        # 遍历 Architect 定义的所有文件
+        for file_spec in state.architecture.file_structure:
+            # 1.1 使用 Agent 生成智能骨架
+            # 传入 Research Idea 和 Architect Design 上下文
+            skeleton_file = coder.write_smart_skeleton(
+                file_spec=file_spec,
+                design=state.architecture,
+                research=state.research,
+                env_config=env_config
+            )
+            initial_files.append(skeleton_file)
+            
+            # 1.2 为了保险，我们可以把 Agent 生成的文件名强制纠正回 Spec 里的文件名
+            # 防止 LLM 只有内容对，文件名写错了
+            skeleton_file.filename = file_spec.filename
+        
+        # 写入骨架
+        self._write_files(conda.code_dir, initial_files)
+        
+        # 1.3 生成环境配置
+        sys_logger.info("Generating environment config...")
+        env_codebase = coder.generate_env_yaml(state.architecture, env_config)
+        self._write_files(conda.code_dir, env_codebase.files)
+        
+        # ====================================================
+        # Step 2: Environment Setup (带自动修复循环)
+        # ====================================================
+        sys_logger.info(">>> [Phase 5.2] Setting up Conda Environment (Auto-Fix Enabled)...")
+        
+        env_yaml_file = next((f for f in env_codebase.files if "environment" in f.filename), None)
         
         if env_yaml_file:
-            success = conda.create_env(env_yaml_file.content)
-            if not success:
-                sys_logger.error("Failed to create initial Conda environment. Aborting.")
-                raise RuntimeError("Conda environment creation failed.")
-        else:
-            sys_logger.warning("No environment.yaml found! Code generation might be incomplete.")
+            env_retries = 3
+            current_env_content = env_yaml_file.content
+            
+            for k in range(env_retries):
+                sys_logger.info(f"   -> Env Setup Attempt {k+1}/{env_retries}")
+                
+                # 尝试创建环境
+                success, stderr = conda.create_env(current_env_content)
+                
+                if success:
+                    sys_logger.info("✅ Conda environment created successfully.")
+                    break
+                else:
+                    sys_logger.warning(f"⚠️ Env creation failed. Triggering Agent to fix dependency issues...")
+                    
+                    if k == env_retries - 1:
+                        raise RuntimeError(f"Failed to create Conda environment after {env_retries} attempts.\nLast Error: {stderr[:500]}")
 
-        # 4. 运行 & 调试循环
+                    # --- 修复环境文件 ---
+                    # 构造错误上下文
+                    error_context = f"Conda environment creation failed.\nError Log:\n{stderr}\n\nTask: Fix `environment.yaml`. If a package is not found in channels, move it to the `pip` section."
+                    
+                    # 使用 Coder 的 fix_code 能力，只传入 environment.yaml
+                    fixed_codebase = coder.fix_code(
+                        command="conda env update",
+                        error_log=error_context,
+                        files={"environment.yaml": current_env_content},
+                        env_config=env_config
+                    )
+                    
+                    # 获取修复后的内容
+                    new_env_file = next((f for f in fixed_codebase.files if "environment" in f.filename), None)
+                    if new_env_file:
+                        # [关键] 修复后，再次注入 Config 中的强制依赖，防止 LLM 改乱了基础配置
+                        # 我们临时构造一个 Codebase 对象来复用 _inject_requirements
+                        coder._inject_requirements(fixed_codebase, env_config)
+                        
+                        # 更新当前内容并写入硬盘
+                        updated_env_file = next((f for f in fixed_codebase.files if "environment" in f.filename), None)
+                        current_env_content = updated_env_file.content
+                        self._write_files(conda.code_dir, [updated_env_file])
+                        sys_logger.info("🔧 Rewrote environment.yaml with fixes.")
+                    else:
+                        sys_logger.error("Agent failed to return a fixed environment.yaml.")
+                        break
+        else:
+            sys_logger.warning("No environment.yaml found! Skipping environment setup.")
+
+        # ====================================================
+        # Step 2.5: Skeleton Verification (Smoke Test)
+        # ====================================================
+        sys_logger.info(">>> [Phase 5.2.5] Verifying Skeleton Structure...")
+        
+        # [核心修复] 必须加上 python 前缀
+        run_command = "python main.py" 
+
+        skeleton_retries = 3
+        for i in range(skeleton_retries):
+            ret, stdout, stderr = conda.run_code(run_command)
+            
+            if ret == 0:
+                sys_logger.info("✅ Skeleton verification passed! Structure is valid.")
+                break
+            
+            sys_logger.warning(f"⚠️ Skeleton failed (Attempt {i+1}/{skeleton_retries}). Fixing imports/structure...")
+            
+            # 触发修复
+            error_msg = stderr if stderr.strip() else stdout[-1000:]
+            current_files = self._read_all_files(conda.code_dir)
+            
+            error_context = f"SKELETON VERIFICATION FAILED. Do not implement logic yet. Fix imports/syntax/structure only.\nError:\n{error_msg}"
+            
+            fixed_codebase = coder.fix_code(
+                command=run_command, # 使用带 python 的命令
+                error_log=error_context,
+                files=current_files,
+                env_config=env_config
+            )
+            self._write_files(conda.code_dir, fixed_codebase.files)
+            
+            # 检查环境是否更新
+            if any("environment.yaml" in f.filename for f in fixed_codebase.files):
+                new_env = next(f.content for f in fixed_codebase.files if "environment.yaml" in f.filename)
+                conda.create_env(new_env)
+        
+        # ====================================================
+        # Step 3: Incremental Implementation (分步填肉)
+        # ====================================================
+        sys_logger.info(">>> [Phase 5.3] Implementing Logic File-by-File...")
+        
+        def sort_key(spec):
+            name = spec.filename.lower()
+            if "utils" in name or "config" in name: return 0
+            if "data" in name: return 1
+            if "model" in name: return 2
+            if "train" in name: return 3
+            if "main" in name: return 4
+            return 5
+        
+        # 使用 state.architecture.file_structure 遍历
+        sorted_specs = sorted(state.architecture.file_structure, key=sort_key)
+        
+        for file_spec in sorted_specs:
+            if not file_spec.filename.endswith(".py"): continue
+            
+            sys_logger.info(f"   -> Working on: {file_spec.filename}")
+            
+            disk_path = os.path.join(conda.code_dir, file_spec.filename)
+            try:
+                with open(disk_path, "r", encoding="utf-8") as f:
+                    skeleton = f.read()
+            except:
+                skeleton = code_utils.generate_skeleton_from_design(file_spec)
+
+            context_str = ""
+            for root, _, filenames in os.walk(conda.code_dir):
+                for fname in filenames:
+                    if fname.endswith(".py") and fname != os.path.basename(file_spec.filename):
+                        fpath = os.path.join(root, fname)
+                        rel_path = os.path.relpath(fpath, conda.code_dir)
+                        signature = code_utils.extract_ast_skeleton(fpath)
+                        context_str += f"--- FILE: {rel_path} (Signatures Only) ---\n{signature}\n\n"
+            
+            impl_file = coder.implement_single_file(
+                file_spec=file_spec,
+                current_skeleton=skeleton,
+                project_context=context_str,
+                env_config=env_config
+            )
+            
+            self._write_files(conda.code_dir, [impl_file])
+
+        # ====================================================
+        # Step 4: Execution Loop (Final Run)
+        # ====================================================
         logs = []
         final_results = None
         
-        # 循环次数 = 初始运行(1) + 重试次数(max_retries)
+        # [核心修复] 不要尝试从 Codebase 对象读取 run_command，直接使用定义好的命令
+        run_command = "python main.py"
+
         for i in range(max_retries + 1):
-            sys_logger.info(f"\n>>> Step 2: Execution Attempt {i+1}/{max_retries+1}...")
+            sys_logger.info(f"\n>>> [Phase 5.4] Final Execution Attempt {i+1}/{max_retries+1}...")
             
-            # --- A. 运行代码 ---
-            ret, stdout, stderr = conda.run_code("main.py")
+            ret, stdout, stderr = conda.run_code(run_command)
             
-            # 记录日志
             log = CodeExecutionLog(
-                command="python main.py",
-                return_code=ret,
-                stdout=stdout[-5000:], # 防止日志过大，截取最后部分
-                stderr=stderr[-5000:]
+                command=run_command, return_code=ret,
+                stdout=stdout[-5000:], stderr=stderr[-5000:]
             )
             logs.append(log)
             
-            # --- B. 成功判定 ---
             if ret == 0:
-                sys_logger.info("✅ Code executed successfully (Exit Code 0).")
-                # 检查 results.json
-                results_path = os.path.join(conda.code_dir, "results.json")
-                if os.path.exists(results_path):
+                res_path = os.path.join(conda.code_dir, "results.json")
+                if os.path.exists(res_path):
                     try:
-                        with open(results_path, "r") as f:
-                            metrics = json.load(f)
+                        with open(res_path, "r") as f: metrics = json.load(f)
                         final_results = ExperimentResults(
-                            metrics=metrics,
-                            figures=[], # 后续可扩展：扫描 figures 目录
+                            metrics=metrics, 
+                            figures=[], 
                             status=ExecutionStatus.SUCCESS
                         )
-                        sys_logger.info(f"🏆 Metrics captured: {metrics}")
-                        break # 成功退出循环
+                        # 扫描图表
+                        figures_path = os.path.join(conda.code_dir, "figures")
+                        if os.path.exists(figures_path):
+                            for fig in os.listdir(figures_path):
+                                if fig.endswith(('.png', '.pdf')):
+                                    final_results.figures.append(os.path.join("code", "figures", fig))
+                        
+                        sys_logger.info(f"🏆 SUCCESS! Metrics: {metrics}")
+                        break
                     except Exception as e:
-                        sys_logger.error(f"Failed to read results.json: {e}")
-                        stderr = f"Code ran successfully but results.json parse failed: {e}"
+                        stderr = f"Results JSON parse error: {e}"
                 else:
-                    sys_logger.warning("Code ran but results.json not found.")
-                    stderr = "Code execution finished (exit code 0), but 'results.json' was not found. Did you save the metrics?"
+                    stderr = "Execution success but 'results.json' missing."
             
-            # --- C. 失败处理 & 退出条件 ---
-            sys_logger.error(f"❌ Execution Issue detected.")
+            sys_logger.error("❌ Execution Failed. Analyzing...")
+            if i == max_retries: break
             
-            if i == max_retries:
-                sys_logger.error("Max retries reached. Coding phase failed to produce valid results.")
-                break
-            
-            # --- D. 自我修复 (Self-Healing) ---
-            # 读取当前所有代码作为 Context
             current_files = self._read_all_files(conda.code_dir)
+            error_context = stderr if stderr.strip() else stdout[-2000:]
             
-            # 构造错误信息 (优先 stderr, 其次 stdout 后几行)
-            error_msg = stderr if stderr.strip() else stdout[-1000:]
-            if "ModuleNotFoundError" in error_msg:
-                error_msg += "\n\nHINT: Missing library. Please update `environment.yaml`."
-
-            # 调用 Agent 修复
-            fixed_codebase = coder.fix_code(error_msg, current_files)
+            fixed_codebase = coder.fix_code(
+                command=run_command,
+                error_log=error_context,
+                files=current_files,
+                env_config=env_config
+            )
             
-            # 覆盖写入修复后的文件
             self._write_files(conda.code_dir, fixed_codebase.files)
             sys_logger.info(f"🔧 Applied fixes to {len(fixed_codebase.files)} files.")
-
-            # --- E. 环境自动修复 (Environment Auto-Fix) ---
-            # 检查是否有 environment.yaml 的更新
-            updated_env_file = next((f for f in fixed_codebase.files if "environment.yaml" in f.filename), None)
             
-            if updated_env_file:
-                sys_logger.info("♻️ Detected environment definition change. Updating Conda env...")
-                # 再次调用注入逻辑，确保 config 中的 base_requirements 依然存在
-                # 注意：这里我们假设 coder.fix_code 返回的内容是纯 LLM 生成的，
-                # 为了保险，最好再次注入一次 base_requirements。
-                # 但由于 coder.fix_code 内部逻辑比较独立，这里为了保持简单，
-                # 我们假设 LLM 在修复时保留了原有的结构。
-                # 更严谨的做法是调用 coder._inject_requirements，但那个方法是私有的且设计用于 generate 阶段。
-                # 鉴于 fix 阶段 LLM 是基于原文修改，通常不会丢掉 pip 依赖。
-                
-                env_success = conda.create_env(updated_env_file.content)
-                if not env_success:
-                    sys_logger.error("Environment update failed during fix loop. Subsequent run might fail.")
+            if any("environment.yaml" in f.filename for f in fixed_codebase.files):
+                sys_logger.info("♻️ Environment changed. Updating...")
+                new_env = next(f.content for f in fixed_codebase.files if "environment.yaml" in f.filename)
+                conda.create_env(new_env)
 
-        # 5. 保存结果到 State
         state.coder = CoderOutput(
-            environment_yaml=env_yaml_file.content if env_yaml_file else "",
+            environment_yaml="", 
             execution_log=logs,
             results=final_results
         )
-        
         return state
 
     def _write_files(self, base_dir, files):
         for file in files:
-            # 1. 统一路径分隔符：将 Windows 的 \ 替换为 /
             normalized_name = file.filename.replace("\\", "/")
-            
-            # 2. 防止路径穿越
             safe_filename = normalized_name.replace("..", "").lstrip("/")
-            
             path = os.path.join(base_dir, safe_filename)
-            
-            # 3. 确保父目录存在
             os.makedirs(os.path.dirname(path), exist_ok=True)
-            
             with open(path, "w", encoding="utf-8") as f:
                 f.write(file.content)
             sys_logger.info(f"Wrote {safe_filename}")
@@ -166,15 +287,11 @@ class CoderPhase(BasePhase):
         files = {}
         for root, _, filenames in os.walk(base_dir):
             for name in filenames:
-                # 排除 pycache, git, vscode 等目录
-                if any(x in root for x in ["__pycache__", ".git", ".vscode"]):
-                    continue
-                    
-                if name.endswith(".py") or name.endswith(".yaml") or name.endswith(".yml") or name.endswith(".sh"):
-                    rel_path = os.path.relpath(os.path.join(root, name), base_dir)
+                if any(x in root for x in ["__pycache__", ".git", ".vscode", "figures"]): continue
+                if name.endswith((".py", ".yaml", ".yml", ".json", ".md")):
+                    rel = os.path.relpath(os.path.join(root, name), base_dir)
                     try:
                         with open(os.path.join(root, name), "r", encoding="utf-8") as f:
-                            files[rel_path] = f.read()
-                    except Exception:
-                        pass 
+                            files[rel] = f.read()
+                    except: pass
         return files

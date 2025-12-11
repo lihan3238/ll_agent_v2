@@ -2,3 +2,5 @@
 workspace/
 logs/
 test.md
+
+__pycache__/

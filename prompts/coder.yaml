@@ -1,48 +1,109 @@
+# src/prompts/coder.yaml
+
 system: |
   You are an Elite AI Research Engineer.
-  Your goal is to implement a complete, runnable codebase based on an Architect's Design Doc.
+  
+  **CONTEXT**:
+  - OS: {os_platform}
+  - Hardware: {hardware_context}
   
   **RULES**:
-  1. **Strict Adherence**: Follow the file structure and class definitions in the Design Doc exactly.
-  2. **Self-Contained**: The code must run. Handle imports correctly.
-  3. **Metrics Protocol**: The `main.py` MUST save final metrics to `results.json`.
-  4. **Environment**: Generate a basic `environment.yaml` containing project-specific libraries.
-
+  1. Implement the logic for the specific file requested.
+  2. **Do NOT change function signatures**. They are fixed by the Architect.
+  3. Use the provided **Project Context (Signatures)** to understand how to call other modules.
+  
   **JSON FORMATTING**:
-  - `files` must be a list of objects: `{{"filename": "...", "content": "..."}}`.
-  - Python code inside JSON must be properly escaped.
+  - Output format: `{{"filename": "...", "content": "..."}}`.
+  - Python code must be escaped.
 
   Output strictly a JSON object matching the schema.
   Target Schema:
   {json_schema}
 
-# 任务 1: 生成代码
-gen_code_template: |
-  # Architecture Blueprint
-  {design_doc}
+# [修改] 极简环境配置 Prompt
+env_gen_template: | 
+  # Project Requirements from Architect
+  {requirements}
   
   # Task
-  Generate the full implementation code.
+  Generate ONLY the `environment.yaml` file content.
   
-  1. **`environment.yaml`**:
-     - Add necessary **project-specific** libraries (e.g. web3, specific crypto libs) that are required by the Architecture.
-     - **DO NOT** worry about base libraries like numpy, pandas, torch. The system will inject them automatically.
-     - Just provide a valid YAML structure with `channels` and `dependencies`.
+  **CRITICAL RULES**:
+  1. **MINIMALISM**: Only include libraries that are **strictly necessary** and **actually imported** in the code logic.
+     - ❌ DO NOT include `redis`, `celery`, `prometheus`, `jaeger`, `rocksdb` unless the Architect explicitly designed a distributed system using them.
+     - ✅ DO include `web3`, `pycryptodome` if this is a blockchain project.
   
-  2. All python files defined in Blueprint.
-  3. `main.py` entrypoint.
+  2. **CONDA FIRST**: Put libraries in the main `dependencies` list by default.
+     - Only use the `- pip:` section for packages that are NOT available in conda-forge.
+  
+  3. **EXCLUSIONS**: Do NOT list base libraries (`numpy`, `pandas`, `scikit-learn`, `matplotlib`, `torch`) in your output. The system injects them automatically.
 
-# 任务 2: 修复 Bug (保持不变)
+  # Expected Output Structure
+  filename: environment.yaml
+  content: |
+    name: project_env
+    channels:
+      - conda-forge  <-- REQUIRED
+      - defaults
+    dependencies:
+      - python=3.11
+      - web3         <-- Put here
+      - bitarray     <-- Put here
+      - pip:
+        - some-rare-lib  <-- Only if necessary
+
+# [修改] 实现单个文件
+implement_template: |
+  # Current Task
+  Implement logic for file: **{filename}**
+  
+  # Architect's Spec for this file (Logic & Steps)
+  {file_spec_json}
+  
+  # Current Code Skeleton (Pass placeholders)
+  {current_skeleton}
+  
+  # Project Context (Signatures of other files)
+  {project_context}
+  
+  # Instructions
+  1. Replace `pass` with actual logic based on `core_logic_steps` in the Spec.
+  2. Keep imports and signatures exactly as provided in the Skeleton.
+  3. **Use ABSOLUTE imports** (e.g., `from src.utils.logger import sys_logger`), NOT relative imports (`from ..utils import`).
+  4. Return the FULL content of this file.
+
 fix_bug_template: |
   # Context
-  I tried to run the code, but it failed.
+  Execution failed.
+  **Command**: `{command}`
   
-  **Error Log (stderr)**:
+  **Error Log**:
   {error_log}
   
-  **Original Code Context**:
+  **Related Code**:
   {file_content}
   
   # Task
-  Analyze the error and provide the FIXED file content.
-  Return **ONLY** the file(s) that need changes.
+  Fix the bug. Return ONLY the fixed file(s).
+
+# [新增] 智能骨架生成
+smart_skeleton_template: |
+  # Project Context
+  **Refined Idea**: {idea}
+  **Architect Design Summary**: 
+  {design_context}
+  
+  # File Specification (Strict Structure)
+  {file_spec_json}
+  
+  # Task
+  Generate the Python code skeleton for **{filename}**.
+  
+  **RULES**:
+  1. **Strictly follow the Class/Method/Function names and signatures** defined in the File Specification. Do NOT change them.
+  2. **Do NOT implement logic**. Use `pass` or `...` or `raise NotImplementedError` in function bodies.
+  3. **ENRICH DOCSTRINGS**: Based on the *Refined Idea* and *Design*, write detailed docstrings for every class and method explaining *what* it should do.
+  4. **Imports**: Generate correct absolute imports (e.g., `from src.core import ...`).
+  5. **Paths**: Use Linux style forward slashes `/`.
+  
+  Return the Python code directly.
