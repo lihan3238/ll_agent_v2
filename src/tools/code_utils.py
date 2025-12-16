@@ -6,24 +6,20 @@ from src.core.schema import FileSpec
 class CodeUtils:
     @staticmethod
     def generate_skeleton_from_design(file_spec: FileSpec) -> str:
-        """
-        [确定性生成] 根据 Architect 的设计，直接生成 Python 骨架代码。
-        """
         lines = []
-        
-        # [优化] 路径清洗：确保内部处理时路径是 POSIX 风格
-        # 虽然写入时也会洗，但这里洗一下能保证日志好看
         clean_filename = file_spec.filename.replace("\\", "/")
         
         # 1. Imports
         if file_spec.imports:
             lines.extend(file_spec.imports)
-            lines.append("") # 空行
+            lines.append("")
+
+        # [删除] 全局 raise，这会阻止文件被 import
+        # lines.append("raise NotImplementedError(...)") 
 
         # 2. Classes
         if file_spec.classes:
             for cls in file_spec.classes:
-                # Class Definition
                 inherits = cls.inherits_from if cls.inherits_from else "object"
                 lines.append(f"class {cls.name}({inherits}):")
                 lines.append(f'    """{cls.description}"""')
@@ -33,18 +29,14 @@ class CodeUtils:
                         lines.append(f"    # {attr}")
                 lines.append("")
 
-                # Methods
                 if cls.methods:
                     for method in cls.methods:
-                        # 参数处理
                         args = method.args
                         args_str = ", ".join(args) if isinstance(args, list) else str(args)
-                        if "self" not in args_str and "classmethod" not in args_str and "staticmethod" not in args_str:
-                            pass 
-
                         lines.append(f"    def {method.name}({args_str}) -> {method.return_type}:")
                         lines.append(f'        """{method.docstring}"""')
-                        lines.append("        pass") # 骨架占位
+                        # 在函数体内抛出异常是合理的，逼迫 AI 去覆盖
+                        lines.append("        raise NotImplementedError('Method not implemented')") 
                         lines.append("")
                 else:
                     lines.append("    pass")
@@ -56,13 +48,13 @@ class CodeUtils:
                 args_str = ", ".join(func.args) if isinstance(func.args, list) else str(func.args)
                 lines.append(f"def {func.name}({args_str}) -> {func.return_type}:")
                 lines.append(f'    """{func.docstring}"""')
-                lines.append("    pass")
+                lines.append("    raise NotImplementedError('Function not implemented')")
                 lines.append("")
 
         # 4. Main Guard
         if "main.py" in clean_filename:
             lines.append('if __name__ == "__main__":')
-            lines.append('    pass')
+            lines.append("    raise NotImplementedError('Main execution not implemented')")
 
         return "\n".join(lines)
 

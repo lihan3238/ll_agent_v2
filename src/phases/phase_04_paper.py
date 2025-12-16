@@ -29,14 +29,27 @@ class PaperPhase(BasePhase):
         config = state_manager._load_config()
         rounds = config.get("workflow", {}).get("paper_rounds", 2)
         
+        # 在 run_phase_logic 方法中的 Step 0 部分：
+        
         # Step 0: Pre-calculate Keys
         sys_logger.info(">>> Step 0: Pre-calculating Citation Keys...")
         bib_entries = []
         citation_map_str = "Available Papers for Citation:\n"
         for p in state.paper_library.values():
+            # [修正] 更稳健的 Key 生成
             first_word = "".join(filter(str.isalpha, p.title.split()[0]))
+            if not first_word: first_word = "Ref"
             key = f"{first_word}{p.year}"
-            entry = f"@article{{{key},\n  title={{{p.title}}},\n  author={{{' and '.join(p.title.split()[:2])}}},\n  year={{{p.year}}},\n  url={{{p.url}}}\n}}"
+            
+            # [修正] 稳健的作者分割
+            if hasattr(p, 'authors') and p.authors:
+                 # 假设 authors 是逗号分隔字符串
+                 author_list = [a.strip() for a in p.authors.split(',')]
+                 authors_bib = " and ".join(author_list)
+            else:
+                 authors_bib = "Anonymous"
+
+            entry = f"@article{{{key},\n  title={{{p.title}}},\n  author={{{authors_bib}}},\n  year={{{p.year}}},\n  url={{{p.url}}}\n}}"
             bib_entries.append(entry)
             citation_map_str += f"- Key: \\cite{{{key}}} | Title: {p.title} ({p.year})\n"
         full_bib_content = "\n\n".join(bib_entries)

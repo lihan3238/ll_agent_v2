@@ -2,6 +2,7 @@
 from src.agents.base import BaseAgent
 from src.core.schema import DesignDocument, TheoreticalFramework
 from src.utils.logger import sys_logger
+import json
 
 class ArchitectAgent(BaseAgent):
     def __init__(self):
@@ -11,39 +12,36 @@ class ArchitectAgent(BaseAgent):
             feedback_instruction: str = "",
             previous_design: DesignDocument = None) -> DesignDocument:
         
-        sys_logger.info(f"Task Started: Architecting solution for {theory.research_field}...")
+        sys_logger.info(f"🏗️ Architect: Designing system for '{theory.research_field}'...")
         
-        # 拼接 Prompt
+        # 1. 准备 Prompt
         full_prompt = self.prompts["system"] + "\n\n" + self.prompts["user_template"]
         
-        # 构造 Feedback 上下文
-        feedback_context = ""
+        # 2. 处理 Feedback 上下文
+        feedback_context = "No previous feedback. Start from scratch."
         if feedback_instruction:
             feedback_context = f"""
-            !!! REVISION REQUEST (CRITICAL) !!!
-            The previous design was reviewed.
-            Feedback: "{feedback_instruction}"
+            !!! REVISION REQUIRED !!!
+            **Reviewer Feedback**: "{feedback_instruction}"
             
-            Action: Fix the issues in the Previous Draft. 
-            **CRITICAL INSTRUCTION**: You must regenerate the ENTIRE JSON object. Do not output only the changed parts. Copy the unchanged parts from the Previous Draft if necessary.
+            **Action**:
+            - Modify the Previous Draft to address the feedback.
+            - Keep the parts that work, fix the parts that don't.
+            - Ensure the JSON structure remains valid.
             """
-        else:
-            feedback_context = "No previous feedback. Initial design."
 
-        # 注入上一轮的设计草稿
+        # 3. 注入上一轮设计 (如果存在)
+        # 这是一个 Trick: 把上一轮的 JSON 放在 Prompt 里，让 LLM "修改" 而不是 "凭空想象"
         if previous_design:
-            # exclude={'main_execution_flow'} 可能会导致 LLM 忘记生成这个字段，
-            # 既然我们要全量输出，最好把全量参考给它，或者只 exclude 极少部分
-            # 这里改为全量 dump，让 LLM 方便抄作业
-            prev_json = previous_design.model_dump_json(indent=2)
-            
-            feedback_context += f"""
-            
-            === PREVIOUS DRAFT (REFERENCE) ===
-            {prev_json}
-            ==================================
-            """
+            try:
+                # 只取前 3000 字符防止 Token 爆炸，或者完整放进去（取决于模型窗口）
+                # 既然用 GPT-4o/DeepSeek，通常可以放完整的
+                prev_json = previous_design.model_dump_json(indent=2)
+                feedback_context += f"\n\n=== PREVIOUS DRAFT ===\n{prev_json}\n======================"
+            except Exception as e:
+                sys_logger.warning(f"Failed to serialize previous design: {e}")
 
+        # 4. 调用 LLM
         design = self.call_llm_with_struct(
             prompt_template=full_prompt,
             schema=DesignDocument,
@@ -53,5 +51,44 @@ class ArchitectAgent(BaseAgent):
             feedback_context=feedback_context
         )
         
-        sys_logger.info(f"Blueprint generated. Planned {len(design.file_structure)} files.")
+        # 5. 后处理/校验
+        self._post_process_check(design)
+        
+        sys_logger.info(f"✅ Design ready: {design.project_name} ({len(design.file_structure)} files)")
         return design
+
+    def _post_process_check(self, design: DesignDocument):
+        """简单校验，防止低级错误"""
+        files = [f.filename for f in design.file_structure]
+        
+        # 强制检查 main.py
+        if "main.py" not in files:
+            sys_logger.warning("Architect forgot main.py! Injecting a placeholder.")
+            from src.core.schema import FileSpec
+            design.file_structure.append(FileSpec(
+                filename="main.py",
+                description="Entry point for training and evaluation.",
+                imports=["src.train"],
+                classes=[],
+                functions=[],
+                # 这里的逻辑描述会传给 Aider
+                core_logic_steps=[
+                    "Initialize config",
+                    "Run training loop",
+                    "Evaluate model",
+                    "Save metrics to results.json (MANDATORY)"
+                ]
+            ))
+            
+        # 强制检查 __init__.py
+        dirs = set()
+        for f in files:
+            if "/" in f:
+                d = f.rsplit("/", 1)[0]
+                dirs.add(d)
+        
+        for d in dirs:
+            init_file = f"{d}/__init__.py"
+            if init_file not in files:
+                # 可以在这里自动补全，或者只是由 Coder 处理（Aider 通常懂这个，但显式更好）
+                pass

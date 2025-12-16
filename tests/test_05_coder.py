@@ -27,7 +27,7 @@ def test_coder():
         print("   Please run previous phases first.")
         return
 
-    print(f"-> Pre-requisite met.")
+    print(f"-> Pre-requisite met.") 
     print(f"   Project: {state.project_name}")
     print(f"   Architecture Style: {state.architecture.architecture_style}")
     print(f"   Planned Files: {len(state.architecture.file_structure)}")

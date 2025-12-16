@@ -1,21 +1,23 @@
-# src/prompts/coder.yaml
-
 system: |
-  You are an Elite AI Research Engineer.
+  You are an **Experiment Engineer** working in a research team.
+  
+  **YOUR MISSION**: 
+  The Paper Writer has written a draft with missing figures and tables.
+  Your goal is to write code that executes experiments and **GENERATES THESE SPECIFIC FILES**.
   
   **CONTEXT**:
   - OS: {os_platform}
   - Hardware: {hardware_context}
   
-  **RULES**:
-  1. Implement the logic for the specific file requested.
-  2. **Do NOT change function signatures**. They are fixed by the Architect.
-  3. Use the provided **Project Context (Signatures)** to understand how to call other modules.
-  
-  **JSON FORMATTING**:
-  - Output format: `{{"filename": "...", "content": "..."}}`.
-  - Python code must be escaped.
+  **CRITICAL RULES**:
+  1. **File-Driven Development**: If the design asks for `figures/convergence.png`, your code MUST save a file exactly at that path.
+  2. **Data Persistence**: Numerical results (accuracy, F1, etc.) MUST be saved to `results.json` so the Refiner can fill LaTeX tables.
+  3. **No Placeholders**: Do not write `pass` or `# TODO`. Write actual plotting code (matplotlib/seaborn).
+  4. **Self-Correction**: If a file is missing after execution, you must write a script to generate it using the saved data.
 
+  **JSON FORMATTING**:
+  - Output format: `{{"files": [ {{"filename": "...", "content": "..."}} ] }}`.
+  
   Output strictly a JSON object matching the schema.
   Target Schema:
   {json_schema}
@@ -30,12 +32,7 @@ env_gen_template: |
   
   **CRITICAL RULES**:
   1. **MINIMALISM**: Only include libraries that are **strictly necessary** and **actually imported** in the code logic.
-     - ❌ DO NOT include `redis`, `celery`, `prometheus`, `jaeger`, `rocksdb` unless the Architect explicitly designed a distributed system using them.
-     - ✅ DO include `web3`, `pycryptodome` if this is a blockchain project.
-  
   2. **CONDA FIRST**: Put libraries in the main `dependencies` list by default.
-     - Only use the `- pip:` section for packages that are NOT available in conda-forge.
-  
   3. **EXCLUSIONS**: Do NOT list base libraries (`numpy`, `pandas`, `scikit-learn`, `matplotlib`, `torch`) in your output. The system injects them automatically.
 
   # Expected Output Structure
@@ -43,14 +40,13 @@ env_gen_template: |
   content: |
     name: project_env
     channels:
-      - conda-forge  <-- REQUIRED
+      - conda-forge
       - defaults
     dependencies:
       - python=3.11
-      - web3         <-- Put here
-      - bitarray     <-- Put here
+      - web3
       - pip:
-        - some-rare-lib  <-- Only if necessary
+        - some-rare-lib
 
 # [修改] 实现单个文件
 implement_template: |
@@ -69,7 +65,11 @@ implement_template: |
   # Instructions
   1. Replace `pass` with actual logic based on `core_logic_steps` in the Spec.
   2. Keep imports and signatures exactly as provided in the Skeleton.
-  3. **Use ABSOLUTE imports** (e.g., `from src.utils.logger import sys_logger`), NOT relative imports (`from ..utils import`).
+  3. **IMPORT STRATEGY (CRITICAL)**:
+     - The working directory is the project root.
+     - **ALWAYS use absolute imports**.
+     - Example: Use `from src.models.unet import UNet`, NOT `from .unet import UNet`.
+     - Do NOT use relative imports (starts with dot) in `main.py`.
   4. Return the FULL content of this file.
 
 fix_bug_template: |
@@ -86,24 +86,24 @@ fix_bug_template: |
   # Task
   Fix the bug. Return ONLY the fixed file(s).
 
-# [新增] 智能骨架生成
+# [修改] 智能骨架生成
 smart_skeleton_template: |
   # Project Context
   **Refined Idea**: {idea}
-  **Architect Design Summary**: 
+  **Target Artifacts**: 
+  The paper needs the following files:
   {design_context}
   
-  # File Specification (Strict Structure)
+  # File Specification
   {file_spec_json}
   
   # Task
-  Generate the Python code skeleton for **{filename}**.
+  Generate the Python code skeleton for **{{filename}}**.
   
-  **RULES**:
-  1. **Strictly follow the Class/Method/Function names and signatures** defined in the File Specification. Do NOT change them.
-  2. **Do NOT implement logic**. Use `pass` or `...` or `raise NotImplementedError` in function bodies.
-  3. **ENRICH DOCSTRINGS**: Based on the *Refined Idea* and *Design*, write detailed docstrings for every class and method explaining *what* it should do.
-  4. **Imports**: Generate correct absolute imports (e.g., `from src.core import ...`).
-  5. **Paths**: Use Linux style forward slashes `/`.
-  
-  Return the Python code directly.
+  **INSTRUCTIONS**:
+  1. If this is a plotting script, import `matplotlib.pyplot`.
+  2. If this is `main.py`, ensure it orchestrates the saving of `results.json` and calling of plotting functions.
+  3. Use absolute imports.
+
+  **OUTPUT FORMAT**:
+  Return a JSON object containing the file content.

@@ -44,7 +44,7 @@ report_gen_prompt: |
   3. Why is the User's Idea theoretically better?
   
   **Output Requirements**:
-  - `gap_analysis`: Fill this list with specific technical flaws of existing works.
+  - `gap_analysis`: Fill this list with specific technical flaws of existing works. **EACH ITEM MUST HAVE `limitation_description` AND `mathematical_root_cause`.**
   - `refined_idea`: Rewrite the user's idea using formal academic terminology.
   - `keywords`: Provide 5-7 high-signal keywords.
   - `related_work_summary`: Synthesize the strongest papers.
@@ -52,8 +52,8 @@ report_gen_prompt: |
   - `implementation_suggestions`: Provide concrete next steps.
 
   **JSON FORMATTING RULES**:
-  1. **`gap_analysis` items MUST be objects** with ALL fields (`existing_method`, `limitation_description`, `mathematical_root_cause`).
-  2. **`top_papers` items MUST be objects** with ALL fields (`title`, `year`, `citations`, `summary`, `url`).
+  1. **`gap_analysis` items MUST be objects** with ALL fields.
+  2. **`top_papers` items MUST be objects** with ALL fields.
   3. Do NOT invent fake citations.
   4. Ensure strict JSON syntax.
 

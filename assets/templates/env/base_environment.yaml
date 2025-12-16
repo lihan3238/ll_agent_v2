@@ -1,0 +1,22 @@
+# assets/templates/env/base_environment.yaml
+name: project_env_placeholder
+channels:
+  - conda-forge
+  - defaults
+dependencies:
+  - python=3.11
+  - pip
+  - numpy
+  - pandas
+  - matplotlib
+  - scikit-learn
+  - seaborn
+  - scipy
+  - tqdm
+  - jupyter
+  # 常用科研库预装
+  - pip:
+    - torch
+    - torchvision
+    - torchaudio
+    - --extra-index-url https://download.pytorch.org/whl/cu118

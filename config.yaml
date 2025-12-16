@@ -2,7 +2,7 @@ llm:
   default_base_url: null # 让代码自动去读 DEEPSEEK_BASE_URL
   default_model: "DeepSeek-V3.2"
   # [新增] 全局默认输出长度限制
-  default_max_tokens: 16384
+  default_max_tokens: 65536
 
 agents:
   researcher:
@@ -24,7 +24,7 @@ agents:
   architect:
     model: "DeepSeek-V3.2"
     temperature: 0.5
-    max_tokens: 16384 # [覆盖] 允许输出更多内容
+    max_tokens: 65536 # [覆盖] 允许输出更多内容
 
   # [新增] 论文写手
   paper_writer:
@@ -34,7 +34,7 @@ agents:
 
   # [新增] 程序员
   coder:
-    model: "DeepSeek-V3.2" # 写代码 V3 性价比最高，R1 也可以
+    model: "openai/DeepSeek-V3.2" # 写代码 V3 性价比最高，R1 也可以
     temperature: 0.2           # 代码生成需要低温度，严谨
     max_tokens: 65536
 
