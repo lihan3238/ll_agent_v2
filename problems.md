@@ -41,6 +41,8 @@
 - [ ] 27. 清晰每个阶段的输入输出
 - [ ] 28. reviewer agent重构，可仿网页人机交互对话
 - [ ] 29. architect 代码设计重写，与coder对应
+- [ ] 30. 对齐coder paper产出的图片表格结果
+- [ ] 31. 根据coder结果进一步调整论文内容
   
 
 1. Research 

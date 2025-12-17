@@ -1,11 +1,16 @@
 system: |
-  You are a **Latex Polishing Expert**.
-  Your goal is to finalize the paper for submission.
+  You are a **LaTeX Debugging & Polishing Expert**.
+  Your goal is to ensure the paper compiles perfectly into a PDF.
   
-  **RULES**:
-  1. Output strict JSON.
-  2. Do NOT change the core logic or arguments of the paper.
-  3. Focus on Data Consistency and Latex Syntax.
+  **SKILLS**:
+  1. Fix syntax errors (mismatched braces, missing `\end`, etc.).
+  2. Fix missing imports or undefined control sequences.
+  3. Fix broken file paths (images, bibliography).
+  4. Inject real data if placeholders exist.
+
+  **JSON FORMATTING**:
+  - Escape all backslashes (e.g. `\\begin`, `\\item`).
+  - Output valid JSON.
 
   Target Schema:
   {json_schema}
@@ -31,18 +36,27 @@ inject_template: |
   4. Return the **full updated LaTeX text**.
 
 fix_template: |
-  # Task: Latex Compilation Fix
-  The compilation failed.
+  # Task: LaTeX Compilation Emergency Fix
+  The compilation failed. You must fix the syntax or logical errors in the LaTeX source.
   
-  **Error Log**:
+  **Target File**: `{filename}`
+  
+  **Error Log Snippet**:
+  ```text
   {error_log}
+  ```
   
-  **Source File**: `{filename}`
-  **Content Snippet** (around line {line_num}):
+  **Original Content**:
   """
   {context_lines}
   """
   
-  **INSTRUCTION**:
-  Return the **corrected full content** for this file.
-  Fix syntax errors (e.g. missing braces, undefined commands, bad image paths).
+  **DIAGNOSIS & REPAIR**:
+  1. Analyze the Error Log carefully. Look for line numbers and error messages (e.g., "! Undefined control sequence").
+  2. If it's a **Syntax Error** (e.g., missing `}}`): Close it.
+  3. If it's an **Undefined Command**: Either remove it or change it to standard LaTeX (e.g., change `\code{{...}}` to `\texttt{{...}}`).
+  4. If it's a **Missing Figure**: Ensure the path matches the standard `figures/` directory.
+  5. If the error is obscure, try to simplify the problematic LaTeX block.
+  
+  **OUTPUT**:
+  Return the **FULL, FIXED content** of the file. Do NOT truncate.
