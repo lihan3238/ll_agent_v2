@@ -46,13 +46,25 @@ class UserFeedback(BaseModel):
     feedback_en: str = Field(default="")
     comments: str = Field(default="")
 
-# --- Phase 3: Architect Outputs (关键修改点) ---
+# --- Phase 3: Architect Outputs ---
+# [新增] 实验产物定义 (移到前面，供 DesignDocument 引用)
+class ArtifactType(str, Enum):
+    FIGURE = "figure"
+    TABLE = "table"
+    OTHER = "other" 
+
+class ExperimentArtifact(BaseModel):
+    artifact_id: str = Field(default="artifact_unknown")
+    type: ArtifactType = Field(default=ArtifactType.OTHER)
+    description: str = Field(default="")
+    filename: str = Field(default="plot.png")
+    metrics_source: List[str] = Field(default_factory=list)
+
 class MethodSpec(BaseModel):
     name: str = Field(default="unknown_method", description="Method name, e.g., 'forward'")
     args: List[Union[str, Dict[str, Any]]] = Field(default_factory=list, description="Arguments with type hints.")
     return_type: str = Field(default="Any", description="Return type.")
     docstring: str = Field(default="", description="Brief explanation.")
-    # [修复] 增加默认值，防止 LLM 漏写或截断
     core_logic_steps: List[str] = Field(
         default_factory=list, 
         description="High-level logic steps. E.g., '1. Load data from X. 2. Init model Y. 3. Train loop...'"
@@ -66,33 +78,22 @@ class ClassSpec(BaseModel):
     methods: List[MethodSpec] = Field(default_factory=list, description="List of methods.")
 
 class FileSpec(BaseModel):
-    filename: str = Field(..., description="Path/Name, e.g., 'src/models/mamba.py'") # filename 最好必填，否则没法写文件
+    filename: str = Field(..., description="Path/Name, e.g., 'src/models/mamba.py'") # filename 必填
     description: str = Field(default="", description="Purpose of this file.")
     imports: List[str] = Field(default_factory=list, description="Key libraries to import.")
     classes: List[ClassSpec] = Field(default_factory=list, description="Classes to define.")
     functions: List[MethodSpec] = Field(default_factory=list, description="Global functions.")
 
-# [新增] 实验产物定义
-class ArtifactType(str, Enum):
-    FIGURE = "figure"
-    TABLE = "table"
-    OTHER = "other" # 兜底
-
-class ExperimentArtifact(BaseModel):
-    artifact_id: str = Field(default="artifact_unknown")
-    type: ArtifactType = Field(default=ArtifactType.OTHER)
-    description: str = Field(default="")
-    filename: str = Field(default="plot.png")
-    metrics_source: List[str] = Field(default_factory=list)
-
 class DesignDocument(BaseModel):
     project_name: str = Field(default="Project")
     architecture_style: str = Field(default="Standard")
+    
+    # [核心] 放在最前面，防止截断
+    experiments_plan: List[ExperimentArtifact] = Field(default_factory=list, description="List of figures/tables needed.")
+    
     requirements: List[str] = Field(default_factory=list)
     file_structure: List[FileSpec] = Field(default_factory=list)
     
-    # [修复] 增加默认值，防止 JSON 截断导致报错
-    experiments_plan: List[ExperimentArtifact] = Field(default_factory=list, description="List of figures/tables needed.")
     data_flow_diagram: str = Field(default="See code.", description="Text-based diagram.")
     hyperparameters: Dict[str, str] = Field(default_factory=dict)
     main_execution_flow: str = Field(default="Run main.py", description="Steps to run.")

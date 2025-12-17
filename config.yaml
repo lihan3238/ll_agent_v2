@@ -1,12 +1,12 @@
 llm:
   default_base_url: null # 让代码自动去读 DEEPSEEK_BASE_URL
-  default_model: "DeepSeek-V3.2"
+  default_model: "DeepSeek-V3.2-Exp"
   # [新增] 全局默认输出长度限制
-  default_max_tokens: 65536
+  default_max_tokens: 60000
 
 agents:
   researcher:
-    model: "DeepSeek-V3.2" # 比如用 deepseek 读论文便宜
+    model: "DeepSeek-V3.2-Exp" # 比如用 deepseek 读论文便宜
     temperature: 0.7
     max_tokens: 8192 # [覆盖] 允许输出更多内容
     
@@ -17,36 +17,36 @@ agents:
     timeout: 15                   # API 超时时间
 
   theorist:
-    model: "DeepSeek-V3.2" # 聪明，负责逻辑推理
+    model: "DeepSeek-V3.2-Exp" # 聪明，负责逻辑推理
     temperature: 0.7
-    max_tokens: 8192 # [覆盖] 允许输出更多内容
+    max_tokens: 16384 # [覆盖] 允许输出更多内容
 
   architect:
-    model: "DeepSeek-V3.2"
+    model: "DeepSeek-V3.2-Exp"
     temperature: 0.5
-    max_tokens: 65536 # [覆盖] 允许输出更多内容
+    max_tokens: 32000 # [修复] 1. 改回支持 Chat 的模型 2. 降低 Token 防止截断
 
   # [新增] 论文写手
   paper_writer:
-    model: "DeepSeek-V3.2" # 写作用 V3 足够，速度快
+    model: "DeepSeek-V3.2-Exp" # 写作用 V3 足够，速度快
     temperature: 0.4       # 稍低温度，保证学术规范
-    max_tokens: 65536      # 写长文需要大窗口
+    max_tokens: 60000      # 写长文需要大窗口
 
   # [新增] 程序员
   coder:
-    model: "openai/DeepSeek-V3.2" # 写代码 V3 性价比最高，R1 也可以
+    model: "openai/DeepSeek-V3.2-Exp" # 写代码 V3 性价比最高，R1 也可以
     temperature: 0.2           # 代码生成需要低温度，严谨
-    max_tokens: 65536
+    max_tokens: 60000
 
   # [新增] 评审专家
   reviewer:
-    model: "DeepSeek-V3.2" # 必须聪明且严谨
+    model: "DeepSeek-V3.2-Exp" # 必须聪明且严谨
     temperature: 0.2 # 低温，减少幻觉，保持严厉
     max_retries: 3
     max_tokens: 4196 # [覆盖] 够写评语就行，省钱
 
   translator:
-    model: "DeepSeek-V3.2" # 翻译需要稍微好一点的模型理解语意，DeepSeek 也可以
+    model: "DeepSeek-V3.2-Exp" # 翻译需要稍微好一点的模型理解语意，DeepSeek 也可以
     temperature: 0.1
     max_tokens: 8192
 
@@ -66,10 +66,19 @@ project:
 workflow:
   # 每个阶段的 Review 轮次 (大循环)
   research_rounds: 3
+
   theory_rounds: 3
+
   architect_rounds: 2
+
   paper_rounds: 2
-  coder_retries: 5
+
+  # Coder 运行主程序失败后的最大修复尝试次数
+  coder_retries: 10
+  # [新增] Conda 环境安装失败时的重试次数
+  env_setup_retries: 3
+  # [新增] Aider 写代码时，遇到语法错误自我修正(Reflection)的最大次数
+  lint_retries: 10
 
   # 每次 Review 前 Agent 自己闷头跑几轮 (小循环)
   internal_loops: 2

@@ -27,12 +27,12 @@ def call_llm(
         if not final_base_url: final_base_url = os.getenv("DEEPSEEK_BASE_URL")
         api_key = os.getenv("DEEPSEEK_API_KEY")
     
-    if not final_base_url: final_base_url = os.getenv("OPENAI_BASE_URL", "https://api.openai.com/v1")
-    if not api_key: api_key = os.getenv("OPENAI_API_KEY")
+    if not final_base_url: final_base_url = os.getenv("DEFAULT_URL", "https://api.openai.com/v1")
+    if not api_key: api_key = os.getenv("DEFAULT_KEY")
     
     if not api_key: 
         api_key = os.getenv("API_KEY") # 最后的尝试
-        if not api_key:
+        if not api_key: 
             raise ValueError(f"Missing API Key for model {model}")
 
     # ================= LOGGING (FILE) =================
@@ -43,8 +43,8 @@ def call_llm(
     # =================================================
 
     # 超时设置：Architect 生成长文本需要很长时间
-    # read=600 意味着如果服务器 600秒 不吐字才算超时
-    timeout = httpx.Timeout(connect=15.0, read=600.0, write=15.0, pool=15.0)
+    # read=1200 意味着如果服务器 1200秒 不吐字才算超时 (20分钟)
+    timeout = httpx.Timeout(connect=30.0, read=1800.0, write=30.0, pool=30.0)
 
     client = OpenAI(
         base_url=final_base_url, 
@@ -72,10 +72,13 @@ def call_llm(
         print("-" * 40) 
         
         chunk_count = 0
+        finish_reason = None
         
         for chunk in response_stream:
             chunk_count += 1
             delta = chunk.choices[0].delta
+            if chunk.choices[0].finish_reason:
+                finish_reason = chunk.choices[0].finish_reason
             
             # [兼容性修复] 优先获取 content，如果没有，尝试获取 reasoning_content (针对 DeepSeek R1)
             # 注意：标准 OpenAI 库可能没有 reasoning_content 属性，需用 getattr 安全获取
@@ -97,6 +100,12 @@ def call_llm(
 
         print("\n" + "-" * 40)
         
+        if finish_reason:
+            llm_logger.info(f"[{agent_name}] Finish Reason: {finish_reason}")
+            
+        if finish_reason == "length":
+            llm_logger.warning(f"⚠️ [{agent_name}] Generation truncated due to length limit! (Max Tokens: {max_tokens})")
+
         full_content = "".join(collected_content)
         
         # [核心修复] 空响应检查

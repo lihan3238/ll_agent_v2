@@ -27,37 +27,48 @@ class PaperWriterAgent(BaseAgent):
                       architect: DesignDocument,
                       previous_content: str = "",
                       references_context: str = "",
-                      # [新增] 修改模式参数
                       existing_text: str = "", 
                       feedback: str = "") -> SectionContent:
-        mode = "REWRITING" if feedback else "WRITING"
-
+        
         sys_logger.info(f"Writing Section: {section_name}...")
         
         full_prompt = self.prompts["system"] + "\n\n" + self.prompts["section_template"]
         
-        # 格式化 Gap Analysis
+        # 1. 格式化 Gap Analysis
         gaps_str = "\n".join([f"- {g.existing_method}: {g.limitation_description}" for g in research.gap_analysis])
         
-        # 格式化前文 (简单截取最后 2000 字符作为上下文，或者传递上一节的摘要)
-        # 这里为了连贯性，传入上一节的完整内容（如果 token 允许）
-        context_window = previous_content[-3000:] if len(previous_content) > 3000 else previous_content
+        # 2. [核心修复] 格式化实验计划 (Experiments Plan)
+        # 告诉 Writer 必须用到哪些图表
+        exp_context = "### Hyperparameters:\n" + str(architect.hyperparameters) + "\n\n"
         
-        # 构造 Revision Context
+        if architect.experiments_plan:
+            exp_context += "### REQUIRED EXPERIMENT ARTIFACTS (MUST INSERT PLACEHOLDERS):\n"
+            exp_context += "You MUST include the following figures/tables in the 'Experiments' section using standard LaTeX:\n"
+            for exp in architect.experiments_plan:
+                exp_context += f"- Type: {exp.type}\n"
+                exp_context += f"  Filename: {{{exp.filename}}}  <-- USE EXACTLY THIS PATH\n"
+                exp_context += f"  Caption: {exp.description}\n"
+                exp_context += f"  Data Source: {exp.metrics_source}\n\n"
+        else:
+            exp_context += "(No specific figures designed. Use standard text description.)"
+
+        # 3. 构造 Revision Context
         revision_context = ""
         if feedback and existing_text:
             revision_context = f"""
-            **EXISTING DRAFT for this section**:
+            === REVISION MODE ===
+            **ORIGINAL DRAFT**:
             {existing_text}
             
             **REVIEWER FEEDBACK**:
             {feedback}
             
-            **INSTRUCTION**: Rewrite the existing draft to address the feedback. Improve clarity and academic tone.
+            **TASK**: Rewrite the draft. Fix issues but KEEP the valid citations and figure placeholders.
             """
         else:
-            revision_context = "(Writing from scratch based on Outline)"
+            revision_context = "(Writing new content from scratch)"
 
+        # 4. 调用 LLM
         return self.call_llm_with_struct(
             prompt_template=full_prompt,
             schema=SectionContent,
@@ -66,8 +77,8 @@ class PaperWriterAgent(BaseAgent):
             refined_idea=research.refined_idea,
             gaps=gaps_str,
             methodology=theory.proposed_methodology,
-            experiments=architect.hyperparameters,
-            previous_content=context_window,
+            experiments_context=exp_context, # [修改] 传入完整的实验上下文
+            previous_content=previous_content[-3000:] if len(previous_content) > 3000 else previous_content,
             references_context=references_context,
-            revision_context=revision_context # [注入]
+            revision_context=revision_context
         )

@@ -20,28 +20,37 @@ class CoderPhase(BasePhase):
 
     def run_phase_logic(self, state: ProjectState) -> ProjectState:
         if not state.architecture: raise ValueError("❌ Missing Architecture.")
-        if not state.paper: raise ValueError("❌ Missing Paper Draft.") # 确保已规划
+        if not state.paper: raise ValueError("❌ Missing Paper Draft.") 
         
         config = state_manager._load_config()
-        max_retries = config.get("workflow", {}).get("coder_retries", 3)
+        
+        # --- [新增] 读取配置参数 ---
+        workflow_conf = config.get("workflow", {})
+        max_retries = workflow_conf.get("coder_retries", 3)
+        # 默认 3 次环境重试
+        env_retries = workflow_conf.get("env_setup_retries", 3) 
+        # 默认 3 次 Lint 反思
+        lint_retries = workflow_conf.get("lint_retries", 3)
         
         # 0. 获取模型配置
         coder_config = config.get("agents", {}).get("coder", {})
         default_model = config.get("llm", {}).get("default_model", "gpt-4o")
         target_model = coder_config.get("model", default_model)
-        # [修改] 获取 max_tokens
-        # 优先级: Agent配置 > 全局默认 > 16384
+        
         global_max = config.get("llm", {}).get("default_max_tokens", 16384)
         target_max_tokens = coder_config.get("max_tokens", global_max)
+        
         # 1. Setup Environment Manager
         conda = CondaManager(state.project_name)
         
-        # 2. Setup Aider [修改] 传入 max_tokens
+        # 2. Setup Aider [修改] 传入 lint_retries
         aider_agent = CoderAgentAider(
             project_path=conda.code_dir, 
             model_name=target_model,
-            max_tokens=target_max_tokens # <--- 传进去
+            max_tokens=target_max_tokens,
+            lint_retries=lint_retries # <--- 传入自定义的反思次数
         )
+
         # ====================================================
         # Step 1: Environment Setup (Template)
         # ====================================================
@@ -49,7 +58,6 @@ class CoderPhase(BasePhase):
         template_path = os.path.join("assets", "templates", "env", "base_environment.yaml")
         
         if not os.path.exists(template_path):
-             # 兜底：如果没有模板，创建一个默认的
              os.makedirs(os.path.dirname(template_path), exist_ok=True)
              with open(template_path, "w") as f:
                  f.write("name: placeholder\nchannels:\n  - conda-forge\ndependencies:\n  - python=3.11\n  - pip\n  - numpy\n  - pip:\n    - torch\n")
@@ -66,19 +74,48 @@ class CoderPhase(BasePhase):
         with open(target_env_path, "w", encoding="utf-8") as f:
             yaml.dump(env_data, f, sort_keys=False)
             
-        success, msg = conda.create_env(yaml.dump(env_data))
-        if not success:
-            sys_logger.error(f"⛔ Base env creation failed: {msg}")
+        # [修改] 使用 Config 中的 env_retries
+        env_success = False
+        for k in range(env_retries):
+            with open(target_env_path, 'r', encoding='utf-8') as f:
+                current_env_content = f.read()
+                
+            success, msg = conda.create_env(current_env_content)
+            if success:
+                sys_logger.info("✅ Conda environment created successfully.")
+                env_success = True
+                break
+            else:
+                sys_logger.warning(f"⚠️ Env failed ({k+1}/{env_retries}). Asking Aider to fix...")
+                clean_msg = re.sub(r'https?://\S+', '', msg)
+                hint = "\n\n[HINT]: If packages are missing in Conda, move them to the `pip:` section."
+                aider_agent.fix_error("conda env update", clean_msg + hint)
+
+        if not env_success:
+            sys_logger.error(f"⛔ Base env creation failed after {env_retries} attempts.")
             raise RuntimeError("Failed to create base conda environment.")
         
         # ====================================================
         # Step 2: Aider Implementation
         # ====================================================
-        if not os.path.exists(os.path.join(conda.code_dir, "main.py")):
+        missing_source_files = []
+        for file_spec in state.architecture.file_structure:
+            clean_name = file_spec.filename.replace("\\", "/")
+            fpath = os.path.join(conda.code_dir, clean_name)
+            if not os.path.exists(fpath):
+                missing_source_files.append(fpath)
+
+        if not os.path.exists(os.path.join(conda.code_dir, "main.py")) or len(missing_source_files) > len(state.architecture.file_structure) * 0.5:
             sys_logger.info(">>> [Phase 5.2] Aider Implementation (Paper-Driven)...")
             aider_agent.implement_design(state.architecture)
         else:
-            sys_logger.info(">>> Code exists. Skipping implementation...")
+            sys_logger.info(">>> Code exists. Skipping full implementation...")
+            if missing_source_files:
+                sys_logger.info(f"⚠️ Found {len(missing_source_files)} missing files. Creating placeholders...")
+                for fpath in missing_source_files:
+                    os.makedirs(os.path.dirname(fpath), exist_ok=True)
+                    with open(fpath, 'w', encoding='utf-8') as f:
+                        f.write(f'"""\nPlaceholder for missing file: {os.path.basename(fpath)}\n"""\n')
 
         # ====================================================
         # Step 3: Execution & Artifact Verification Loop
@@ -88,11 +125,8 @@ class CoderPhase(BasePhase):
         logs = []
         final_results = None
         
-        # 获取必须生成的产物清单
         required_artifacts = []
-        # 1. 基础数据
         required_artifacts.append({"path": "results.json", "desc": "Numerical Metrics"})
-        # 2. 论文图表
         if state.architecture.experiments_plan:
             for exp in state.architecture.experiments_plan:
                 required_artifacts.append({"path": exp.filename, "desc": exp.description})
@@ -100,7 +134,6 @@ class CoderPhase(BasePhase):
         for i in range(max_retries):
             sys_logger.info(f"   -> Run Attempt {i+1}/{max_retries}...")
             
-            # 运行代码
             ret, stdout, stderr = conda.run_code(run_command)
             
             logs.append(CodeExecutionLog(
@@ -114,23 +147,26 @@ class CoderPhase(BasePhase):
             if ret == 0:
                 sys_logger.info("✅ Execution Successful (Exit 0). Verifying Artifacts...")
                 
-                # --- 核心验证逻辑 ---
-                missing_files = []
+                missing_artifacts = []
                 for artifact in required_artifacts:
                     file_path = os.path.join(conda.code_dir, artifact["path"])
                     if not os.path.exists(file_path):
-                        missing_files.append(f"- {artifact['path']} ({artifact['desc']})")
+                        missing_artifacts.append(f"- Artifact: {artifact['path']} ({artifact['desc']})")
                 
-                if not missing_files:
-                    # 全部通过
-                    sys_logger.info("🏆 All required artifacts generated!")
+                missing_source = []
+                for file_spec in state.architecture.file_structure:
+                    clean_name = file_spec.filename.replace("\\", "/")
+                    fpath = os.path.join(conda.code_dir, clean_name)
+                    if not os.path.exists(fpath) or os.path.getsize(fpath) < 50:
+                        missing_source.append(f"- Source: {clean_name}")
+
+                if not missing_artifacts and not missing_source:
+                    sys_logger.info("🏆 All required artifacts and source files generated!")
                     
-                    # 读取结果
                     try:
                         with open(os.path.join(conda.code_dir, "results.json"), "r") as f:
                             metrics = json.load(f)
                         
-                        # 收集实际存在的图片路径 (用于展示)
                         figures_found = [
                             f["path"] for f in required_artifacts 
                             if f["path"].endswith(('.png', '.pdf', '.jpg'))
@@ -144,38 +180,32 @@ class CoderPhase(BasePhase):
                         needs_fix = True
                         fix_message = f"Execution success, but 'results.json' is invalid: {e}"
                 else:
-                    # 运行成功，但缺文件
                     needs_fix = True
-                    missing_str = "\n".join(missing_files)
+                    missing_str = "\n".join(missing_artifacts + missing_source)
                     fix_message = f"""
-                    [SYSTEM ERROR] The code ran successfully (exit code 0), BUT failed to generate these MANDATORY files required for the paper:
+                    [SYSTEM ERROR] The code ran successfully (exit code 0), BUT failed to generate MANDATORY files or implement required source files:
                     
                     {missing_str}
                     
                     **ACTION REQUIRED**:
-                    1. You MUST implement the plotting/saving logic for these files.
-                    2. Ensure they are saved to the correct paths (e.g. `figures/`).
-                    3. Update `main.py` to call these functions.
+                    1. If 'Source' is missing: Implement the missing python file logic based on the architecture. OVERWRITE the file with full code.
+                    2. If 'Artifact' is missing: Implement the plotting/saving logic in `main.py` or relevant files.
+                    3. Ensure all files are saved to the correct paths.
                     """
-                    sys_logger.warning(f"⚠️ Missing {len(missing_files)} artifacts. Triggering fix...")
+                    sys_logger.warning(f"⚠️ Missing {len(missing_artifacts) + len(missing_source)} items. Triggering fix...")
             else:
-                # 运行报错
                 needs_fix = True
                 fix_message = stderr if stderr.strip() else stdout[-1000:]
                 sys_logger.warning(f"❌ Run failed with code {ret}.")
 
-            # 调用修复
             if needs_fix and i < max_retries - 1:
-                # 简单的 URL 清洗，防止 Aider 爬取
                 clean_msg = re.sub(r'https?://\S+', '', fix_message)
                 aider_agent.fix_error(run_command, clean_msg)
                 
-                # 如果是环境问题，尝试同步
                 if "ModuleNotFoundError" in fix_message:
                     with open(target_env_path, "r") as f:
                         conda.create_env(f.read())
 
-        # Finalize
         state.coder = CoderOutput(
             environment_yaml="Managed",
             execution_log=logs,
