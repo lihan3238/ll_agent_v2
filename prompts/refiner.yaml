@@ -1,0 +1,48 @@
+system: |
+  You are a **Latex Polishing Expert**.
+  Your goal is to finalize the paper for submission.
+  
+  **RULES**:
+  1. Output strict JSON.
+  2. Do NOT change the core logic or arguments of the paper.
+  3. Focus on Data Consistency and Latex Syntax.
+
+  Target Schema:
+  {json_schema}
+
+inject_template: |
+  # Task: Data Injection
+  The experiments have finished. We have real data in `results.json`.
+  You need to update the placeholders or generic descriptions in the LaTeX text with these real numbers.
+  
+  **Experimental Results**:
+  {metrics_json}
+  
+  **Target Section**: "{section_name}"
+  **Current Text**:
+  """
+  {latex_content}
+  """
+  
+  **INSTRUCTIONS**:
+  1. Look for placeholders like `XX%`, `TBD`, or generic claims like "outperforms baselines".
+  2. Replace them with specific numbers from `results.json` (e.g. "98.5%").
+  3. If the abstract says "We achieve high accuracy", change it to "We achieve 98.5% accuracy".
+  4. Return the **full updated LaTeX text**.
+
+fix_template: |
+  # Task: Latex Compilation Fix
+  The compilation failed.
+  
+  **Error Log**:
+  {error_log}
+  
+  **Source File**: `{filename}`
+  **Content Snippet** (around line {line_num}):
+  """
+  {context_lines}
+  """
+  
+  **INSTRUCTION**:
+  Return the **corrected full content** for this file.
+  Fix syntax errors (e.g. missing braces, undefined commands, bad image paths).

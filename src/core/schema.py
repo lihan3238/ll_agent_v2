@@ -143,6 +143,14 @@ class EnvRequirements(BaseModel):
     additional_conda_packages: List[str] = Field(default_factory=list)
     additional_pip_packages: List[str] = Field(default_factory=list)
 
+# --- Phase 6: Refiner Outputs ---
+class RefinerOutput(BaseModel):
+    final_pdf_path: str = Field(default="")
+    latex_source_path: str = Field(default="")
+    compilation_log: str = Field(default="")
+    # 记录做了哪些数据注入，例如 {"Abstract_Accuracy": "98.5%"}
+    injected_data: Dict[str, Any] = Field(default_factory=dict) 
+
 # --- Reviewer ---
 class ReviewDecision(str, Enum):
     ACCEPT = "APPROVE"
